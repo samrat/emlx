@@ -269,7 +269,7 @@ defmodule EMLX.Backend do
       # Get the actual shape after summation
       actual_shape = EMLX.shape(result)
       # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
-      scalar_type = EMLX.scalar_type(result)
+      # scalar_type = EMLX.scalar_type(result)
 
       # Create a new output tensor with the correct shape
       %{out | shape: actual_shape}
@@ -295,7 +295,7 @@ defmodule EMLX.Backend do
       # Get the actual shape after summation
       actual_shape = EMLX.shape(result)
       # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
-      scalar_type = EMLX.scalar_type(result)
+      # scalar_type = EMLX.scalar_type(result)
 
       # Create a new output tensor with the correct shape
       %{out | shape: actual_shape}
@@ -321,12 +321,44 @@ defmodule EMLX.Backend do
       # Get the actual shape after summation
       actual_shape = EMLX.shape(result)
       # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
-      scalar_type = EMLX.scalar_type(result)
+      # scalar_type = EMLX.scalar_type(result)
 
       # Create a new output tensor with the correct shape
       %{out | shape: actual_shape}
       |> then(&to_nx(result, &1))
     end
+  end
+
+  @impl true
+  def stack(out, tensors, axis) do
+    tensors
+    |> Enum.map(&from_nx/1)
+    |> EMLX.stack(axis)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def select(out, pred, on_true, on_false) do
+    on_true = Nx.as_type(on_true, Nx.type(out))
+    on_false = Nx.as_type(on_false, Nx.type(out))
+    on_true_torch = from_nx(on_true)
+    on_false_torch = from_nx(on_false)
+
+    # Use logical_not to convert any tensor to a boolean tensor
+    # because of that, we have to swap true/false tensor
+    pred
+    |> from_nx()
+    |> EMLX.logical_not()
+    |> EMLX.where(on_false_torch, on_true_torch)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def take_along_axis(out, tensor, idx, axis) do
+    tensor
+    |> from_nx()
+    |> EMLX.take_along_axis(from_nx(idx), axis)
+    |> to_nx(out)
   end
 
   @impl true

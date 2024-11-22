@@ -391,6 +391,32 @@ NIF(tensordot) {
   TENSOR(mlx::core::tensordot(*a, *b, axes1, axes2, device));
 }
 
+NIF(stack) {
+  LIST_PARAM(0, std::vector<mlx::core::array>, arrays);
+  PARAM(1, int, axis);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::stack(arrays, axis, device));
+}
+
+NIF(where) {
+  TENSOR_PARAM(0, condition);
+  TENSOR_PARAM(1, x);
+  TENSOR_PARAM(2, y);
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::where(*condition, *x, *y, device));
+}
+
+NIF(take_along_axis) {
+  TENSOR_PARAM(0, t);
+  TENSOR_PARAM(1, indices);
+  PARAM(2, int, axis);
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::take_along_axis(*t, *indices, axis, device));
+}
+
 /* Reduction Ops */
 
 #define REDUCTION_AXES_OP(OP) REDUCTION_AXES_OP2(OP, OP)
@@ -587,8 +613,20 @@ BINARY_OP(greater_equal)
 BINARY_OP(less_equal)
 BINARY_OP(logical_and)
 BINARY_OP(logical_or)
+NIF(logical_xor) {
+  TENSOR_PARAM(0, a);
+  TENSOR_PARAM(1, b);
+  DEVICE_PARAM(2, device);
+
+  auto t1 = mlx::core::logical_or(*a, *b, device);
+  auto t2 = mlx::core::logical_not(mlx::core::logical_and(*a, *b, device), device);
+  TENSOR(mlx::core::logical_and(t1, t2, device));
+}
 
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
+                                 {"stack", 3, stack},
+                                 {"where", 4, where},
+                                 {"take_along_axis", 4, take_along_axis},
                                  {"all", 4, all},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
@@ -666,6 +704,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"less_equal", 3, less_equal},
                                  {"logical_and", 3, logical_and},
                                  {"logical_or", 3, logical_or},
+                                 {"logical_xor", 3, logical_xor},
                                  {"deallocate", 1, deallocate}};
 
 // Update the NIF initialization

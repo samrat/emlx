@@ -99,6 +99,18 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def stack(_tensors, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def where(_condition, _on_true, _on_false, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def take_along_axis(_tensor, _indices, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def abs(_tensor, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -320,6 +332,10 @@ defmodule EMLX.NIF do
   end
 
   def logical_or(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def logical_xor(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

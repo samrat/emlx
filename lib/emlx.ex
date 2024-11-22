@@ -150,6 +150,7 @@ defmodule EMLX do
   deftensor less_equal(tensorA, tensorB)
   deftensor logical_and(tensorA, tensorB)
   deftensor logical_or(tensorA, tensorB)
+  deftensor logical_xor(tensorA, tensorB)
   def tensordot(tensorA, tensorB, axesA, axesB),
     do: tensordot(tensorA, tensorB, axesA, [], axesB, [])
 
@@ -202,6 +203,9 @@ defmodule EMLX do
   deftensor cumulative_product(tensor, axis, reverse, inclusive)
   deftensor cumulative_max(tensor, axis, reverse, inclusive)
   deftensor cumulative_min(tensor, axis, reverse, inclusive)
+  deftensor stack(tensors, axis)
+  deftensor where(tensorPred, tensorTrue, tensorFalse)
+  deftensor take_along_axis(tensor, tensorIndices, axis)
 
   ## Dirty non-tensor return values
   defvalue to_blob(tensor)
