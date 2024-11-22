@@ -35,7 +35,6 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-
   def to_blob(_array) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -88,11 +87,27 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def less_equal(_a, _b, _device) do
+  def greater(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def less(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
   def greater_equal(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def less_equal(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def logical_and(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def logical_or(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

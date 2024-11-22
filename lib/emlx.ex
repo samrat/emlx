@@ -132,8 +132,12 @@ defmodule EMLX do
   deftensor max(tensorA, tensorB)
   deftensor equal(tensorA, tensorB)
   deftensor not_equal(tensorA, tensorB)
-  deftensor less_equal(tensorA, tensorB)
+  deftensor greater(tensorA, tensorB)
+  deftensor less(tensorA, tensorB)
   deftensor greater_equal(tensorA, tensorB)
+  deftensor less_equal(tensorA, tensorB)
+  deftensor logical_and(tensorA, tensorB)
+  deftensor logical_or(tensorA, tensorB)
   def tensordot(tensorA, tensorB, axesA, axesB),
     do: tensordot(tensorA, tensorB, axesA, [], axesB, [])
 
@@ -206,5 +210,4 @@ defmodule EMLX do
         raise ArgumentError, "expected a EMLX tensor, got: #{inspect(bad_tensor)}"
     end)
   end
-
 end

@@ -452,8 +452,12 @@ NIF(max) {
 
 BINARY_OP(equal)
 BINARY_OP(not_equal)
+BINARY_OP(greater)
+BINARY_OP(less)
 BINARY_OP(greater_equal)
 BINARY_OP(less_equal)
+BINARY_OP(logical_and)
+BINARY_OP(logical_or)
 
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"sum", 4, sum},
@@ -476,8 +480,12 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"max", 3, max},
                                  {"equal", 3, equal},
                                  {"not_equal", 3, not_equal},
+                                 {"greater", 3, greater},
+                                 {"less", 3, less},
                                  {"greater_equal", 3, greater_equal},
-                                 {"less_equal", 3, less_equal}};
+                                 {"less_equal", 3, less_equal},
+                                 {"logical_and", 3, logical_and},
+                                 {"logical_or", 3, logical_or}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)
