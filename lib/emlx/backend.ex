@@ -247,12 +247,18 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
-  @impl true
-  def abs(%T{} = out, %T{} = tensor) do
-    EMLX.abs(from_nx(tensor)) |> to_nx(out)
+  # Unary Ops
+
+  ops = [:abs, :ceil, :conjugate, :floor, :negate, :round, :sign, :real, :imag, :logical_not]
+
+  for op <- ops do
+    @impl true
+    def unquote(op)(out, tensor) do
+      EMLX.unquote(op)(from_nx(tensor)) |> to_nx(out)
+    end
   end
 
-  # Ops
+  # Binary Ops
 
   ops = [:add, :subtract, :multiply, :pow, :left_shift]
 
@@ -280,9 +286,10 @@ defmodule EMLX.Backend do
     do: tensor
 
   ops =
-    [:min, :max, :divide, :quotient, :atan2] ++
+    [:min, :max, :divide, :quotient, :remainder, :atan2] ++
       [:right_shift, :logical_and, :logical_or, :logical_xor] ++
-      [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal]
+      [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
+      [:bitwise_and, :bitwise_or, :bitwise_xor]
 
   for op <- ops do
     @impl true

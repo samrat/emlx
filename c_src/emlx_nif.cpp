@@ -429,9 +429,27 @@ static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
 }
 
 UNARY_OP(abs)
+UNARY_OP(ceil)
+UNARY_OP(conjugate)
+UNARY_OP(floor)
+UNARY_OP2(negate, negative)
+UNARY_OP(round)
+UNARY_OP(sign)
+UNARY_OP(real)
+UNARY_OP(imag)
+UNARY_OP(logical_not)
 BINARY_OP(add)
 BINARY_OP(subtract)
 BINARY_OP(multiply)
+BINARY_OP2(pow, power)
+BINARY_OP2(remainder, remainder)
+BINARY_OP2(divide, divide)
+BINARY_OP2(atan2, arctan2)
+BINARY_OP(bitwise_and)
+BINARY_OP(bitwise_or)
+BINARY_OP(bitwise_xor)
+BINARY_OP(left_shift)
+BINARY_OP(right_shift)
 
 // min and max in Nx correspond to `minimum` and `maximum` in MLX
 NIF(min) {
@@ -473,9 +491,27 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},
                                  {"abs", 2, abs},
+                                 {"ceil", 2, ceil},
+                                 {"conjugate", 2, conjugate},
+                                 {"floor", 2, floor},
+                                 {"negate", 2, negate},
+                                 {"round", 2, round},
+                                 {"sign", 2, sign},
+                                 {"real", 2, real},
+                                 {"imag", 2, imag},
+                                 {"logical_not", 2, logical_not},
                                  {"add", 3, add},
                                  {"subtract", 3, subtract},
                                  {"multiply", 3, multiply},
+                                 {"pow", 3, pow},
+                                 {"remainder", 3, remainder},
+                                 {"divide", 3, divide},
+                                 {"atan2", 3, atan2},
+                                 {"bitwise_and", 3, bitwise_and},
+                                 {"bitwise_or", 3, bitwise_or},
+                                 {"bitwise_xor", 3, bitwise_xor},
+                                 {"left_shift", 3, left_shift},
+                                 {"right_shift", 3, right_shift},
                                  {"min", 3, min},
                                  {"max", 3, max},
                                  {"equal", 3, equal},

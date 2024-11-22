@@ -128,6 +128,15 @@ defmodule EMLX do
   deftensor add(tensorA, tensorB)
   deftensor subtract(tensorA, tensorB)
   deftensor multiply(tensorA, tensorB)
+  deftensor pow(tensorA, tensorB)
+  deftensor remainder(tensorA, tensorB)
+  deftensor divide(tensorA, tensorB)
+  deftensor atan2(tensorA, tensorB)
+  deftensor bitwise_and(tensorA, tensorB)
+  deftensor bitwise_or(tensorA, tensorB)
+  deftensor bitwise_xor(tensorA, tensorB)
+  deftensor left_shift(tensorA, tensorB)
+  deftensor right_shift(tensorA, tensorB)
   deftensor min(tensorA, tensorB)
   deftensor max(tensorA, tensorB)
   deftensor equal(tensorA, tensorB)
@@ -145,6 +154,15 @@ defmodule EMLX do
 
   ## Unary ops
   deftensor abs(tensor)
+  deftensor ceil(tensor)
+  deftensor conjugate(tensor)
+  deftensor floor(tensor)
+  deftensor negate(tensor)
+  deftensor round(tensor)
+  deftensor sign(tensor)
+  deftensor real(tensor)
+  deftensor imag(tensor)
+  deftensor logical_not(tensor)
 
   ## Aggregation
 

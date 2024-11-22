@@ -59,6 +59,42 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def ceil(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def conjugate(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def floor(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def negate(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def round(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def sign(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def real(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def imag(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def logical_not(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def add(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -68,6 +104,42 @@ defmodule EMLX.NIF do
   end
 
   def multiply(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def pow(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def remainder(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def divide(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def atan2(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def bitwise_and(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def bitwise_or(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def bitwise_xor(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def left_shift(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def right_shift(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
