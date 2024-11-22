@@ -43,13 +43,8 @@ defmodule EMLX.Backend do
   end
 
   @impl true
-  def backend_copy(%T{type: type, shape: shape} = tensor, Nx.BinaryBackend, opts) do
-    Nx.from_binary(to_binary(tensor, Nx.size(tensor)), type, opts)
-    |> Nx.reshape(shape)
-  end
-
   def backend_copy(%T{type: type, shape: shape} = tensor, backend, opts) do
-    backend.from_binary(to_binary(tensor, Nx.size(tensor)), type, opts)
+    Nx.from_binary(to_binary(tensor, Nx.size(tensor)), type, backend: {backend, opts})
     |> Nx.reshape(shape)
   end
 
@@ -214,26 +209,31 @@ defmodule EMLX.Backend do
   #   |> constant_serialize_scalar()
   # end
 
-  @impl true
-  def sum(%T{} = out, %T{} = t, opts) do
-    axes = opts[:axes] || []
-    keep_axes = opts[:keep_axes] || false
+  # Aggregation
+  ops = [:all, :any, :sum, :product]
 
-    # Calculate the expected output shape based on the input shape and axes
-    result =
-      t
-      |> from_nx()
-      |> EMLX.sum(axes, keep_axes)
-      |> EMLX.to_type(to_mlx_type(out.type))
+  for op <- ops do
+    @impl true
+    def unquote(op)(out, tensor, opts) do
+      axes = opts[:axes] || []
+      keep_axes = opts[:keep_axes] || false
 
-    # Get the actual shape after summation
-    actual_shape = EMLX.shape(result)
-    # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
-    scalar_type = EMLX.scalar_type(result)
+      # Calculate the expected output shape based on the input shape and axes
+      result =
+        tensor
+        |> from_nx()
+        |> EMLX.unquote(op)(axes, keep_axes)
+        |> EMLX.to_type(to_mlx_type(out.type))
 
-    # Create a new output tensor with the correct shape
-    %{out | shape: actual_shape}
-    |> then(&to_nx(result, &1))
+      # Get the actual shape after summation
+      actual_shape = EMLX.shape(result)
+      # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
+      scalar_type = EMLX.scalar_type(result)
+
+      # Create a new output tensor with the correct shape
+      %{out | shape: actual_shape}
+      |> then(&to_nx(result, &1))
+    end
   end
 
   @impl true
@@ -272,7 +272,7 @@ defmodule EMLX.Backend do
 
   # Unary Ops
 
-  ops = [:abs, :ceil, :conjugate, :floor, :negate, :round, :sign, :real, :imag, :logical_not]
+  ops = [:abs, :ceil, :conjugate, :floor, :negate, :round, :sign, :real, :imag, :is_nan, :is_infinity, :logical_not]
 
   for op <- ops do
     @impl true

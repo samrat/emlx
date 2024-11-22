@@ -162,11 +162,16 @@ defmodule EMLX do
   deftensor sign(tensor)
   deftensor real(tensor)
   deftensor imag(tensor)
+  deftensor is_nan(tensor)
+  deftensor is_infinity(tensor)
   deftensor logical_not(tensor)
+  deftensor sigmoid(tensor)
 
   ## Aggregation
-
+  deftensor all(tensor, axes, keep_axes)
+  deftensor any(tensor, axes, keep_axes)
   deftensor sum(tensor, axes, keep_axes)
+  deftensor product(tensor, axes, keep_axes)
 
   ## Dirty non-tensor return values
   defvalue to_blob(tensor)

@@ -19,7 +19,19 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def all(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def any(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def sum(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def product(_array, _axes, _keep_dims, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -91,7 +103,19 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def is_nan(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def is_infinity(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def logical_not(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def sigmoid(_tensor, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

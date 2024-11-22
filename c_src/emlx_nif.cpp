@@ -195,6 +195,40 @@ NIF(scalar_type) {
     return nx::nif::error(env, "Could not determine tensor type.");
 }
 
+NIF(all) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  PARAM(2, bool, keep_dims);
+  DEVICE_PARAM(3, device);
+
+  if (axes.empty()) {
+    for (int i = 0; i < t->ndim(); ++i) {
+      axes.push_back(i);
+    }
+  }
+
+  auto result = mlx::core::all(*t, axes, keep_dims, device);
+
+  TENSOR(result);
+}
+
+NIF(any) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  PARAM(2, bool, keep_dims);
+  DEVICE_PARAM(3, device);
+
+  if (axes.empty()) {
+    for (int i = 0; i < t->ndim(); ++i) {
+      axes.push_back(i);
+    }
+  }
+
+  auto result = mlx::core::any(*t, axes, keep_dims, device);
+
+  TENSOR(result);
+}
+
 NIF(sum) {
   TENSOR_PARAM(0, t);
   LIST_PARAM(1, std::vector<int>, axes);
@@ -211,6 +245,23 @@ NIF(sum) {
   }
 
   auto result = mlx::core::sum(*t, axes, keep_dims, device);
+
+  TENSOR(result);
+}
+
+NIF(product) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  PARAM(2, bool, keep_dims);
+  DEVICE_PARAM(3, device);
+
+  if (axes.empty()) {
+    for (int i = 0; i < t->ndim(); ++i) {
+      axes.push_back(i);
+    }
+  }
+
+  auto result = mlx::core::prod(*t, axes, keep_dims, device);
 
   TENSOR(result);
 }
@@ -446,7 +497,10 @@ UNARY_OP(round)
 UNARY_OP(sign)
 UNARY_OP(real)
 UNARY_OP(imag)
+UNARY_OP2(is_nan, isnan)
+UNARY_OP2(is_infinity, isinf)
 UNARY_OP(logical_not)
+UNARY_OP(sigmoid)
 BINARY_OP(add)
 BINARY_OP(subtract)
 BINARY_OP(multiply)
@@ -454,29 +508,13 @@ BINARY_OP2(pow, power)
 BINARY_OP2(remainder, remainder)
 BINARY_OP2(divide, divide)
 BINARY_OP2(atan2, arctan2)
+BINARY_OP2(min, minimum)
+BINARY_OP2(max, maximum)
 BINARY_OP(bitwise_and)
 BINARY_OP(bitwise_or)
 BINARY_OP(bitwise_xor)
 BINARY_OP(left_shift)
 BINARY_OP(right_shift)
-
-// min and max in Nx correspond to `minimum` and `maximum` in MLX
-NIF(min) {
-  TENSOR_PARAM(0, a);
-  TENSOR_PARAM(0, b);
-
-  DEVICE_PARAM(2, device);
-  TENSOR(mlx::core::minimum(*a, *b, device));
-}
-
-NIF(max) {
-  TENSOR_PARAM(0, a);
-  TENSOR_PARAM(0, b);
-
-  DEVICE_PARAM(2, device);
-  TENSOR(mlx::core::maximum(*a, *b, device));
-}
-
 BINARY_OP(equal)
 BINARY_OP(not_equal)
 BINARY_OP(greater)
@@ -487,7 +525,10 @@ BINARY_OP(logical_and)
 BINARY_OP(logical_or)
 
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
+                                 {"all", 4, all},
+                                 {"any", 4, any},
                                  {"sum", 4, sum},
+                                 {"product", 4, product},
                                  {"shape", 1, shape},
                                  {"reshape", 3, reshape},
                                  {"to_type", 3, to_type},
@@ -508,7 +549,10 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"sign", 2, sign},
                                  {"real", 2, real},
                                  {"imag", 2, imag},
+                                 {"is_nan", 2, is_nan},
+                                 {"is_infinity", 2, is_infinity},
                                  {"logical_not", 2, logical_not},
+                                 {"sigmoid", 2, sigmoid},
                                  {"add", 3, add},
                                  {"subtract", 3, subtract},
                                  {"multiply", 3, multiply},
