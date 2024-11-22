@@ -43,6 +43,27 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def backend_copy(%T{type: type, shape: shape} = tensor, Nx.BinaryBackend, opts) do
+    Nx.from_binary(to_binary(tensor, Nx.size(tensor)), type, opts)
+    |> Nx.reshape(shape)
+  end
+
+  def backend_copy(%T{type: type, shape: shape} = tensor, backend, opts) do
+    backend.from_binary(to_binary(tensor, Nx.size(tensor)), type, opts)
+    |> Nx.reshape(shape)
+  end
+
+  # FIXME: properly deallocate the tensor
+  @impl true
+  def backend_transfer(tensor, Nx.BinaryBackend, opts) do
+    backend_copy(tensor, Nx.BinaryBackend, opts)
+  end
+
+  def backend_transfer(tensor, backend, opts) do
+    backend_copy(tensor, backend, opts)
+  end
+
+  @impl true
   def inspect(%T{} = tensor, inspect_opts) do
     limit = if inspect_opts.limit == :infinity, do: :infinity, else: inspect_opts.limit + 1
 
