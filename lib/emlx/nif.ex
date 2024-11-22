@@ -127,6 +127,86 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def asin(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def asinh(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def acos(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def acosh(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def atan(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def atanh(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def cos(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def cosh(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def erf(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def erf_inv(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def exp(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def expm1(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def log(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def log1p(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def rsqrt(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def sin(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def sinh(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def sqrt(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def tan(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def tanh(_tensor, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def add(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

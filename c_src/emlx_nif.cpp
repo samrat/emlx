@@ -527,6 +527,28 @@ UNARY_OP2(is_nan, isnan)
 UNARY_OP2(is_infinity, isinf)
 UNARY_OP(logical_not)
 UNARY_OP(sigmoid)
+
+UNARY_OP2(asin, arcsin)
+UNARY_OP2(asinh, arcsinh)
+UNARY_OP2(acos, arccos)
+UNARY_OP2(acosh, arccosh)
+UNARY_OP2(atan, arctan)
+UNARY_OP2(atanh, arctanh)
+UNARY_OP(cos)
+UNARY_OP(cosh)
+UNARY_OP(erf)
+UNARY_OP2(erf_inv, erfinv)
+UNARY_OP(exp)
+UNARY_OP(expm1)
+UNARY_OP(log)
+UNARY_OP(log1p)
+UNARY_OP(rsqrt)
+UNARY_OP(sin)
+UNARY_OP(sinh)
+UNARY_OP(sqrt)
+UNARY_OP(tan)
+UNARY_OP(tanh)
+
 BINARY_OP(add)
 BINARY_OP(subtract)
 BINARY_OP(multiply)
@@ -582,6 +604,22 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"is_infinity", 2, is_infinity},
                                  {"logical_not", 2, logical_not},
                                  {"sigmoid", 2, sigmoid},
+                                 {"asin", 2, asin},
+                                 {"asinh", 2, asinh},
+                                 {"cos", 2, cos},
+                                 {"cosh", 2, cosh},
+                                 {"erf", 2, erf},
+                                 {"erf_inv", 2, erf_inv},
+                                 {"exp", 2, exp},
+                                 {"expm1", 2, expm1},
+                                 {"log", 2, log},
+                                 {"log1p", 2, log1p},
+                                 {"rsqrt", 2, rsqrt},
+                                 {"sin", 2, sin},
+                                 {"sinh", 2, sinh},
+                                 {"sqrt", 2, sqrt},
+                                 {"tan", 2, tan},
+                                 {"tanh", 2, tanh},
                                  {"add", 3, add},
                                  {"subtract", 3, subtract},
                                  {"multiply", 3, multiply},
