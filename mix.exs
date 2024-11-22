@@ -30,7 +30,7 @@ defmodule EMLX.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :inets, :ssl, :public_key, :crypto]
     ]
   end
 
@@ -133,11 +133,6 @@ defmodule EMLX.MixProject do
 
   def download!(url, save_as \\ nil) do
     url_charlist = String.to_charlist(url)
-
-    # TODO: Remove me when we require Elixir v1.15
-    {:ok, _} = Application.ensure_all_started(:inets)
-    {:ok, _} = Application.ensure_all_started(:ssl)
-    {:ok, _} = Application.ensure_all_started(:public_key)
 
     if proxy = System.get_env("HTTP_PROXY") || System.get_env("http_proxy") do
       Mix.shell().info("Using HTTP_PROXY: #{proxy}")
