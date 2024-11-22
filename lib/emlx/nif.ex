@@ -7,6 +7,14 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def full(_value, _shape, _type, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def arange(_start, _stop, _step, _integer?, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def eye(_m, _n, _type, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

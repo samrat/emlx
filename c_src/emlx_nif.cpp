@@ -356,6 +356,32 @@ NIF(scalar_tensor) {
   TENSOR(mlx::core::array(scalar, type))
 }
 
+NIF(full) {
+  SCALAR_PARAM(0, scalar);
+  SHAPE_PARAM(1, shape);
+  TYPE_PARAM(2, type);
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::full(shape, scalar, type, device));
+}
+
+NIF(arange) {
+  PARAM(3, bool, integer);
+  DEVICE_PARAM(4, device);
+
+  if (integer) {
+    PARAM(0, int, start);
+    PARAM(1, int, stop);
+    PARAM(2, int, step);
+    TENSOR(mlx::core::arange(start, stop, step, device));
+  } else {
+    PARAM(0, double, start);
+    PARAM(1, double, stop);
+    PARAM(2, double, step);
+    TENSOR(mlx::core::arange(start, stop, step, device));
+  }
+}
+
 NIF(eye) {
   PARAM(0, int, m);
   PARAM(1, int, n);
@@ -496,6 +522,8 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"from_blob", 4, from_blob},
                                  {"scalar_tensor", 3, scalar_tensor},
                                  {"ones", 3, ones},
+                                 {"full", 4, full},
+                                 {"arange", 5, arange},
                                  {"eye", 4, eye},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},

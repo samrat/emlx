@@ -118,6 +118,8 @@ defmodule EMLX do
   defdevice from_blob(blob, shape, type, device)
   defdevice scalar_tensor(scalar, type, device)
   defdevice ones(shape, type, device)
+  defdevice full(value, shape, type, device)
+  defdevice arange(start, stop, step, integer?, device)
 
   ## Manipulation
   deftensor reshape(tensor, shape)

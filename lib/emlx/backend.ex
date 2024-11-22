@@ -206,13 +206,54 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
-  # FIXME: Use `full` like torchx
-  # def constant(%T{shape: shape, type: type} = out, scalar, _backend_options) do
-  #   shape_list = Tuple.to_list(shape)
+  def constant(%T{shape: shape, type: type} = out, scalar, backend_options) do
+    scalar
+    |> constant_serialize_scalar()
+    |> EMLX.full(shape, to_mlx_type(type), device_option(backend_options))
+    |> to_nx(out)
+  end
 
-  #   scalar
-  #   |> constant_serialize_scalar()
-  # end
+  @impl true
+  def iota(%{shape: {}, type: type} = out, nil, backend_options) do
+    constant(out, 0, backend_options)
+  end
+
+  def iota(%T{shape: shape, type: type} = out, nil, backend_options) do
+    EMLX.arange(
+      0,
+      Nx.size(shape),
+      1,
+      Nx.Type.integer?(type),
+      device_option(backend_options)
+    )
+    |> EMLX.to_type(to_mlx_type(type))
+    |> EMLX.reshape(shape)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def iota(%T{shape: {n}, type: type} = out, 0, backend_options) do
+    EMLX.arange(0, n, 1, Nx.Type.integer?(type), device_option(backend_options))
+    |> EMLX.to_type(to_mlx_type(type))
+    |> to_nx(out)
+  end
+
+  def iota(%T{shape: shape, type: type} = out, axis, backend_options) do
+    # gets the size of iota
+    dim = elem(shape, axis)
+
+    # build the iota in one dimension
+    aten =
+      EMLX.arange(0, dim, 1, Nx.Type.integer?(type), device_option(backend_options))
+      |> EMLX.to_type(to_mlx_type(type))
+
+    # reshape the tensor above to be have shape where everything is 1, except for dim
+    reshape = Tuple.duplicate(1, Nx.rank(shape)) |> put_elem(axis, dim)
+    aten = EMLX.reshape(aten, reshape)
+
+    # Now broadcast the tensor using the original shape
+    EMLX.broadcast_to(aten, shape) |> to_nx(out)
+  end
 
   @impl true
   def sum(%T{} = out, %T{} = t, opts) do
