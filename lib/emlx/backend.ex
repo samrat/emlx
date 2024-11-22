@@ -53,14 +53,16 @@ defmodule EMLX.Backend do
     |> Nx.reshape(shape)
   end
 
-  # FIXME: properly deallocate the tensor
   @impl true
-  def backend_transfer(tensor, Nx.BinaryBackend, opts) do
-    backend_copy(tensor, Nx.BinaryBackend, opts)
+  def backend_transfer(tensor, backend, opts) do
+    new_tensor = backend_copy(tensor, backend, opts)
+    backend_deallocate(tensor)
+    new_tensor
   end
 
-  def backend_transfer(tensor, backend, opts) do
-    backend_copy(tensor, backend, opts)
+  @impl true
+  def backend_deallocate(%T{data: %Backend{ref: ref}}) do
+    EMLX.deallocate(ref)
   end
 
   @impl true

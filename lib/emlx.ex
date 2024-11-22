@@ -228,4 +228,8 @@ defmodule EMLX do
         raise ArgumentError, "expected a EMLX tensor, got: #{inspect(bad_tensor)}"
     end)
   end
+
+  def deallocate(tensor_ref) do
+    NIF.deallocate(tensor_ref)
+  end
 end

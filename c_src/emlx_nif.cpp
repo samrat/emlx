@@ -175,6 +175,15 @@ create_tensor_resource(ErlNifEnv *env, mlx::core::array tensor) {
   if (!nx::nif::get_list(env, argv[ARGN], VAR))                                \
     return nx::nif::error(env, "Unable to get " #VAR " list param.");
 
+NIF(deallocate) {
+  TensorP t(env, argv[0]);
+  if (t.deallocate()) {
+    return nx::nif::ok(env);
+  } else {
+    return nx::nif::atom(env, "already_deallocated");
+  }
+}
+
 NIF(scalar_type) {
   TENSOR_PARAM(0, t);
 
@@ -521,7 +530,8 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"greater_equal", 3, greater_equal},
                                  {"less_equal", 3, less_equal},
                                  {"logical_and", 3, logical_and},
-                                 {"logical_or", 3, logical_or}};
+                                 {"logical_or", 3, logical_or},
+                                 {"deallocate", 1, deallocate}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)
