@@ -270,6 +270,13 @@ defmodule EMLX do
 
   @impl Nx.Defn.Compiler
   def __jit__(key, vars, fun, args_list, opts) do
+    case Nx.default_backend() do
+       EMLX.Backend -> :ok
+       {EMLX.Backend, _} -> :ok
+       other ->
+         raise ArgumentError, "EMLX can only be used with the EMLX backend, got: #{inspect(other)}"
+    end
+
     fun = __compile__(key, vars, fun, opts)
 
     [result] = fun.(args_list)
