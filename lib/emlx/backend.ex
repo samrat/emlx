@@ -385,6 +385,31 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def put_slice(out, input, start_indices_unbounded, slice) do
+    input_tx = from_nx(input)
+
+    slice_shape_list = Tuple.to_list(slice.shape)
+
+    zip_indices_input = [Tuple.to_list(input.shape), start_indices_unbounded, slice_shape_list]
+
+    {start_indices, stop_indices} =
+      Enum.zip_with(zip_indices_input, fn [dim_size, idx, len] ->
+        idx = Nx.to_number(idx)
+        start = min(max(idx, 0), dim_size - len)
+        {start, start + len}
+      end)
+      |> Enum.unzip()
+
+
+    slice_tx = slice |> from_nx() |> EMLX.to_type(to_mlx_type(out.type))
+
+    input_tx
+    |> EMLX.to_type(to_mlx_type(out.type))
+    |> EMLX.slice_update(slice_tx, start_indices, stop_indices)
+    |> to_nx(out)
+  end
+
+  @impl true
   def select(out, pred, on_true, on_false) do
     on_true = Nx.as_type(on_true, Nx.type(out))
     on_false = Nx.as_type(on_false, Nx.type(out))

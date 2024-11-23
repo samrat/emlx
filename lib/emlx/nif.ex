@@ -11,6 +11,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def slice_update(_tensor, _tensor_updates, _starts, _stops, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def squeeze(_tensor, _axes, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

@@ -709,6 +709,15 @@ NIF(slice) {
   TENSOR(mlx::core::slice(*t, starts, stops, strides, device));
 }
 
+NIF(slice_update) {
+  TENSOR_PARAM(0, t);
+  TENSOR_PARAM(1, tensor_updates);
+  LIST_PARAM(2, std::vector<int>, starts);
+  LIST_PARAM(3, std::vector<int>, stops);
+  DEVICE_PARAM(4, device);
+  TENSOR(mlx::core::slice_update(*t, *tensor_updates, starts, stops, device));
+}
+
 NIF(squeeze) {
   TENSOR_PARAM(0, t);
   LIST_PARAM(1, std::vector<int>, axes);
@@ -756,6 +765,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"take_along_axis", 4, take_along_axis},
                                  {"take", 4, take},
                                  {"slice", 5, slice},
+                                 {"slice_update", 5, slice_update},
                                  {"squeeze", 3, squeeze},
                                  {"item", 1, item},
                                  {"all", 4, all},

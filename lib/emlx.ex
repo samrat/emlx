@@ -289,6 +289,7 @@ defmodule EMLX do
   end
 
   deftensor slice(tensor, starts, stops, strides)
+  deftensor slice_update(tensor, tensor_updates, starts, stops)
   deftensor squeeze(tensor, axes)
   defvalue item(tensor)
 
