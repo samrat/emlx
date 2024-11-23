@@ -439,6 +439,15 @@ NIF(take_along_axis) {
   TENSOR(mlx::core::take_along_axis(*t, *indices, axis, device));
 }
 
+NIF(take) {
+  TENSOR_PARAM(0, t);
+  TENSOR_PARAM(1, indices);
+  PARAM(2, int, axis);
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::take(*t, *indices, axis, device));
+}
+
 /* Reduction Ops */
 
 #define REDUCTION_AXES_OP(OP) REDUCTION_AXES_OP2(OP, OP)
@@ -745,6 +754,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"where", 4, where},
                                  {"concatenate", 3, concatenate},
                                  {"take_along_axis", 4, take_along_axis},
+                                 {"take", 4, take},
                                  {"slice", 5, slice},
                                  {"squeeze", 3, squeeze},
                                  {"item", 1, item},

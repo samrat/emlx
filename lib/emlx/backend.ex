@@ -377,6 +377,14 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def concatenate(out, tensors, axis) do
+    tensors
+    |> Enum.map(&from_nx/1)
+    |> EMLX.concatenate(axis)
+    |> to_nx(out)
+  end
+
+  @impl true
   def select(out, pred, on_true, on_false) do
     on_true = Nx.as_type(on_true, Nx.type(out))
     on_false = Nx.as_type(on_false, Nx.type(out))
@@ -393,18 +401,22 @@ defmodule EMLX.Backend do
   end
 
   @impl true
-  def concatenate(out, tensors, axis) do
-    tensors
-    |> Enum.map(&from_nx/1)
-    |> EMLX.concatenate(axis)
+  def take_along_axis(out, tensor, idx, opts) do
+    axis = opts[:axis]
+
+    tensor
+    |> from_nx()
+    |> EMLX.take_along_axis(from_nx(idx), axis)
     |> to_nx(out)
   end
 
   @impl true
-  def take_along_axis(out, tensor, idx, axis) do
+  def take(out, tensor, indices, opts) do
+    axis = opts[:axis]
+
     tensor
     |> from_nx()
-    |> EMLX.take_along_axis(from_nx(idx), axis)
+    |> EMLX.take(from_nx(indices), axis)
     |> to_nx(out)
   end
 
@@ -529,51 +541,6 @@ defmodule EMLX.Backend do
       |> EMLX.to_type(to_mlx_type(out.type))
       |> to_nx(out)
     end
-  end
-
-  # FFT Ops
-  @impl true
-  def fft(out, tensor, opts) do
-    length = opts[:length]
-    axis = opts[:axis] || -1
-
-    tensor
-    |> from_nx()
-    |> EMLX.fft(length, axis)
-    |> to_nx(out)
-  end
-
-  @impl true
-  def ifft(out, tensor, opts) do
-    length = opts[:length]
-    axis = opts[:axis] || -1
-
-    tensor
-    |> from_nx()
-    |> EMLX.ifft(length, axis)
-    |> to_nx(out)
-  end
-
-  @impl true
-  def fft2(out, tensor, opts) do
-    length = opts[:length]
-    axes = opts[:axes] || [-2, -1]
-
-    tensor
-    |> from_nx()
-    |> EMLX.fft2(length, axes)
-    |> to_nx(out)
-  end
-
-  @impl true
-  def ifft2(out, tensor, opts) do
-    length = opts[:length]
-    axes = opts[:axes] || [-2, -1]
-
-    tensor
-    |> from_nx()
-    |> EMLX.ifft2(length, axes)
-    |> to_nx(out)
   end
 
   @impl true
