@@ -568,6 +568,51 @@ defmodule EMLX.Backend do
     end
   end
 
+  # FFT Ops
+  @impl true
+  def fft(out, tensor, opts) do
+    length = opts[:length]
+    axis = opts[:axis] || -1
+
+    tensor
+    |> from_nx()
+    |> EMLX.fft(length, axis)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def ifft(out, tensor, opts) do
+    length = opts[:length]
+    axis = opts[:axis] || -1
+
+    tensor
+    |> from_nx()
+    |> EMLX.ifft(length, axis)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def fft2(out, tensor, opts) do
+    length = opts[:length]
+    axes = opts[:axes] || [-2, -1]
+
+    tensor
+    |> from_nx()
+    |> EMLX.fft2(length, axes)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def ifft2(out, tensor, opts) do
+    length = opts[:length]
+    axes = opts[:axes] || [-2, -1]
+
+    tensor
+    |> from_nx()
+    |> EMLX.ifft2(length, axes)
+    |> to_nx(out)
+  end
+
   @impl true
   def all_close(out, a, b, opts) do
     atol = opts[:atol] || 1.0e-4
