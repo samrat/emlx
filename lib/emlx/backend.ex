@@ -78,7 +78,6 @@ defmodule EMLX.Backend do
   @impl true
   def from_binary(%T{type: type, shape: shape} = out, binary, backend_options) do
     binary
-    |> maybe_pad_binary(type)
     |> EMLX.from_blob(
       shape,
       to_mlx_type(type),
