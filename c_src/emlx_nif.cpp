@@ -462,6 +462,12 @@ NIF(tensordot) {
   TENSOR(mlx::core::tensordot(*a, *b, axes1, axes2, device));
 }
 
+NIF(eval) {
+  TENSOR_PARAM(0, t);
+  mlx::core::eval(*t);
+  return nx::nif::ok(env);
+}
+
 /* Unary Ops */
 
 #define UNARY_OP(OP) UNARY_OP2(OP, OP)
@@ -574,6 +580,7 @@ BINARY_OP(logical_and)
 BINARY_OP(logical_or)
 
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
+                                 {"eval", 1, eval},
                                  {"all", 4, all},
                                  {"any", 4, any},
                                  {"sum", 4, sum},

@@ -261,4 +261,41 @@ defmodule EMLX do
   def deallocate(tensor_ref) do
     NIF.deallocate(tensor_ref)
   end
+
+  def eval(tensor) do
+    NIF.eval(tensor)
+  end
+
+  @behaviour Nx.Defn.Compiler
+
+  @impl Nx.Defn.Compiler
+  def __jit__(key, vars, fun, args_list, opts) do
+    fun = __compile__(key, vars, fun, opts)
+
+    [result] = fun.(args_list)
+
+
+    Nx.Defn.Composite.traverse(result, fn
+      %Nx.Tensor{data: %EMLX.Backend{ref: {_device, ref}}} = node ->
+        :ok = eval(ref)
+        node
+
+      other ->
+        other
+    end)
+
+    [result]
+  end
+
+  @impl Nx.Defn.Compiler
+  defdelegate __compile__(key, vars, fun, opts), to: Nx.Defn.Evaluator
+
+  @impl Nx.Defn.Compiler
+  defdelegate __partitions_options__(opts), to: Nx.Defn.Evaluator
+
+  @impl Nx.Defn.Compiler
+  def __to_backend__(opts) do
+    device = Keyword.get(opts, :device, :gpu)
+    {EMLX.Backend, device: device}
+  end
 end

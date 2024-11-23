@@ -313,8 +313,44 @@ defmodule EMLX.Backend do
 
   # Unary Ops
 
-  ops = [:abs, :ceil, :conjugate, :floor, :negate, :round, :sign, :real, :imag, :is_nan, :is_infinity, :logical_not] ++
-        [:sigmoid, :asin, :asinh, :acos, :acosh, :atan, :atanh, :cos, :cosh, :erf, :erf_inv, :exp, :expm1, :log, :log1p, :rsqrt, :sin, :sinh, :sqrt, :tan, :tanh]
+  ops =
+    [
+      :abs,
+      :ceil,
+      :conjugate,
+      :floor,
+      :negate,
+      :round,
+      :sign,
+      :real,
+      :imag,
+      :is_nan,
+      :is_infinity,
+      :logical_not
+    ] ++
+      [
+        :sigmoid,
+        :asin,
+        :asinh,
+        :acos,
+        :acosh,
+        :atan,
+        :atanh,
+        :cos,
+        :cosh,
+        :erf,
+        :erf_inv,
+        :exp,
+        :expm1,
+        :log,
+        :log1p,
+        :rsqrt,
+        :sin,
+        :sinh,
+        :sqrt,
+        :tan,
+        :tanh
+      ]
 
   for op <- ops do
     @impl true
