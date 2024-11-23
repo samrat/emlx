@@ -270,6 +270,9 @@ defmodule EMLX do
 
   @impl Nx.Defn.Compiler
   def __jit__(key, vars, fun, args_list, opts) do
+    # TODO: instead of checking the backend here,
+    # we should automatically convert from binary backend to EMLX backend
+    # given a device optionsg
     case Nx.default_backend() do
        EMLX.Backend -> :ok
        {EMLX.Backend, _} -> :ok
