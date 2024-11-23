@@ -195,77 +195,6 @@ NIF(scalar_type) {
     return nx::nif::error(env, "Could not determine tensor type.");
 }
 
-NIF(all) {
-  TENSOR_PARAM(0, t);
-  LIST_PARAM(1, std::vector<int>, axes);
-  PARAM(2, bool, keep_dims);
-  DEVICE_PARAM(3, device);
-
-  if (axes.empty()) {
-    for (int i = 0; i < t->ndim(); ++i) {
-      axes.push_back(i);
-    }
-  }
-
-  auto result = mlx::core::all(*t, axes, keep_dims, device);
-
-  TENSOR(result);
-}
-
-NIF(any) {
-  TENSOR_PARAM(0, t);
-  LIST_PARAM(1, std::vector<int>, axes);
-  PARAM(2, bool, keep_dims);
-  DEVICE_PARAM(3, device);
-
-  if (axes.empty()) {
-    for (int i = 0; i < t->ndim(); ++i) {
-      axes.push_back(i);
-    }
-  }
-
-  auto result = mlx::core::any(*t, axes, keep_dims, device);
-
-  TENSOR(result);
-}
-
-NIF(sum) {
-  TENSOR_PARAM(0, t);
-  LIST_PARAM(1, std::vector<int>, axes);
-  PARAM(2, bool, keep_dims);
-  DEVICE_PARAM(3, device);
-
-  // If axes is empty, sum over all dimensions
-  // MLX sums over all dimensions ONLY if axes is not specified.
-  // If an empty vector is passed, it will not sum over any dimensions.
-  if (axes.empty()) {
-    for (int i = 0; i < t->ndim(); ++i) {
-      axes.push_back(i);
-    }
-  }
-
-  auto result = mlx::core::sum(*t, axes, keep_dims, device);
-
-  TENSOR(result);
-}
-
-NIF(product) {
-  TENSOR_PARAM(0, t);
-  LIST_PARAM(1, std::vector<int>, axes);
-  PARAM(2, bool, keep_dims);
-  DEVICE_PARAM(3, device);
-
-  if (axes.empty()) {
-    for (int i = 0; i < t->ndim(); ++i) {
-      axes.push_back(i);
-    }
-  }
-
-  auto result = mlx::core::prod(*t, axes, keep_dims, device);
-
-  TENSOR(result);
-}
-
 NIF(shape) {
   TENSOR_PARAM(0, t);
 
@@ -468,6 +397,118 @@ NIF(eval) {
   return nx::nif::ok(env);
 }
 
+NIF(stack) {
+  LIST_PARAM(0, std::vector<mlx::core::array>, arrays);
+  PARAM(1, int, axis);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::stack(arrays, axis, device));
+}
+
+NIF(where) {
+  TENSOR_PARAM(0, condition);
+  TENSOR_PARAM(1, x);
+  TENSOR_PARAM(2, y);
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::where(*condition, *x, *y, device));
+}
+
+NIF(take_along_axis) {
+  TENSOR_PARAM(0, t);
+  TENSOR_PARAM(1, indices);
+  PARAM(2, int, axis);
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::take_along_axis(*t, *indices, axis, device));
+}
+
+/* Reduction Ops */
+
+#define REDUCTION_AXES_OP(OP) REDUCTION_AXES_OP2(OP, OP)
+
+#define REDUCTION_AXES_OP2(OP, NATIVE_OP)                                      \
+  NIF(OP) {                                                                    \
+    TENSOR_PARAM(0, tensor);                                                   \
+    LIST_PARAM(1, std::vector<int>, axes);                                     \
+    PARAM(2, bool, keep_dims);                                                 \
+    DEVICE_PARAM(3, device);                                                   \
+                                                                               \
+    if (axes.empty()) {                                                        \
+      for (int i = 0; i < tensor->ndim(); ++i) {                               \
+        axes.push_back(i);                                                     \
+      }                                                                        \
+    }                                                                          \
+    TENSOR(mlx::core::NATIVE_OP(*tensor, axes, keep_dims, device));            \
+  }
+
+#define REDUCTION_AXIS_OP(OP) REDUCTION_AXIS_OP2(OP, OP)
+
+#define REDUCTION_AXIS_OP2(OP, NATIVE_OP)                                      \
+  NIF(OP) {                                                                    \
+    TENSOR_PARAM(0, tensor);                                                   \
+    PARAM(1, int, axis);                                                       \
+    PARAM(2, bool, keep_dims);                                                 \
+    DEVICE_PARAM(3, device);                                                   \
+                                                                               \
+    TENSOR(mlx::core::NATIVE_OP(*tensor, axis, keep_dims, device));            \
+  }
+
+#define REDUCTION_AXIS_REVERSIBLE_OP(OP) REDUCTION_AXIS_REVERSIBLE_OP2(OP, OP)
+
+#define REDUCTION_AXIS_REVERSIBLE_OP2(OP, NATIVE_OP)                                      \
+  NIF(OP) {                                                                    \
+    TENSOR_PARAM(0, tensor);                                                   \
+    PARAM(1, int, axis);                                                       \
+    PARAM(2, bool, keep_dims);                                                 \
+    DEVICE_PARAM(3, device);                                                   \
+                                                                               \
+    TENSOR(mlx::core::NATIVE_OP(*tensor, axis, keep_dims, device));            \
+  }
+
+REDUCTION_AXES_OP(all)
+REDUCTION_AXES_OP(any)
+REDUCTION_AXES_OP(sum)
+REDUCTION_AXES_OP2(product, prod)
+REDUCTION_AXIS_OP(argmax)
+REDUCTION_AXIS_OP(argmin)
+
+NIF(cumulative_sum) {
+  TENSOR_PARAM(0, tensor);
+  PARAM(1, int, axis);
+  PARAM(2, bool, reverse);
+  PARAM(3, bool, inclusive);
+  DEVICE_PARAM(4, device);
+  TENSOR(mlx::core::cumsum(*tensor, axis, reverse, inclusive, device));
+}
+
+NIF(cumulative_product) {
+  TENSOR_PARAM(0, tensor);
+  PARAM(1, int, axis);
+  PARAM(2, bool, reverse);
+  PARAM(3, bool, inclusive);
+  DEVICE_PARAM(4, device);
+  TENSOR(mlx::core::cumprod(*tensor, axis, reverse, inclusive, device));
+}
+
+NIF(cumulative_max) {
+  TENSOR_PARAM(0, tensor);
+  PARAM(1, int, axis);
+  PARAM(2, bool, reverse);
+  PARAM(3, bool, inclusive);
+  DEVICE_PARAM(4, device);
+  TENSOR(mlx::core::cummax(*tensor, axis, reverse, inclusive, device));
+}
+
+NIF(cumulative_min) {
+  TENSOR_PARAM(0, tensor);
+  PARAM(1, int, axis);
+  PARAM(2, bool, reverse);
+  PARAM(3, bool, inclusive);
+  DEVICE_PARAM(4, device);
+  TENSOR(mlx::core::cummin(*tensor, axis, reverse, inclusive, device));
+}
+
 /* Unary Ops */
 
 #define UNARY_OP(OP) UNARY_OP2(OP, OP)
@@ -568,6 +609,14 @@ BINARY_OP2(quotient, floor_divide)
 BINARY_OP(bitwise_and)
 BINARY_OP(bitwise_or)
 BINARY_OP(bitwise_xor)
+NIF(bitwise_not) {
+  TENSOR_PARAM(0, a);
+  DEVICE_PARAM(1, device);
+
+  auto dtype = (*a).dtype();
+  auto mask = mlx::core::full({1}, 0xFFFFFFFFFFFFFFFF, dtype, device);
+  TENSOR(mlx::core::subtract(mask, *a, device));
+}
 BINARY_OP(left_shift)
 BINARY_OP(right_shift)
 BINARY_OP(equal)
@@ -578,13 +627,51 @@ BINARY_OP(greater_equal)
 BINARY_OP(less_equal)
 BINARY_OP(logical_and)
 BINARY_OP(logical_or)
+NIF(logical_xor) {
+  TENSOR_PARAM(0, a);
+  TENSOR_PARAM(1, b);
+  DEVICE_PARAM(2, device);
+
+  auto t1 = mlx::core::logical_or(*a, *b, device);
+  auto t2 = mlx::core::logical_not(mlx::core::logical_and(*a, *b, device), device);
+  TENSOR(mlx::core::logical_and(t1, t2, device));
+}
+NIF(allclose) {
+  TENSOR_PARAM(0, a);
+  TENSOR_PARAM(1, b);
+  PARAM(2, double, rtol);
+  PARAM(3, double, atol);
+  PARAM(4, bool, equal_nan);
+  DEVICE_PARAM(5, device);
+
+  TENSOR(mlx::core::allclose(*a, *b, rtol, atol, equal_nan, device));
+}
+NIF(isclose) {
+  TENSOR_PARAM(0, a);
+  TENSOR_PARAM(1, b);
+  PARAM(2, double, rtol);
+  PARAM(3, double, atol);
+  PARAM(4, bool, equal_nan);
+  DEVICE_PARAM(5, device);
+
+  TENSOR(mlx::core::isclose(*a, *b, rtol, atol, equal_nan, device));
+}
 
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},
+                                 {"stack", 3, stack},
+                                 {"where", 4, where},
+                                 {"take_along_axis", 4, take_along_axis},
                                  {"all", 4, all},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
                                  {"product", 4, product},
+                                 {"argmax", 4, argmax},
+                                 {"argmin", 4, argmin},
+                                 {"cumulative_sum", 5, cumulative_sum},
+                                 {"cumulative_product", 5, cumulative_product},
+                                 {"cumulative_max", 5, cumulative_max},
+                                 {"cumulative_min", 5, cumulative_min},
                                  {"shape", 1, shape},
                                  {"reshape", 3, reshape},
                                  {"to_type", 3, to_type},
@@ -615,6 +702,8 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"asinh", 2, asinh},
                                  {"cos", 2, cos},
                                  {"cosh", 2, cosh},
+                                 {"atan", 2, atan},
+                                 {"atanh", 2, atanh},
                                  {"erf", 2, erf},
                                  {"erf_inv", 2, erf_inv},
                                  {"exp", 2, exp},
@@ -637,6 +726,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"bitwise_and", 3, bitwise_and},
                                  {"bitwise_or", 3, bitwise_or},
                                  {"bitwise_xor", 3, bitwise_xor},
+                                 {"bitwise_not", 2, bitwise_not},
                                  {"left_shift", 3, left_shift},
                                  {"right_shift", 3, right_shift},
                                  {"min", 3, min},
@@ -650,6 +740,9 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"less_equal", 3, less_equal},
                                  {"logical_and", 3, logical_and},
                                  {"logical_or", 3, logical_or},
+                                 {"logical_xor", 3, logical_xor},
+                                 {"allclose", 6, allclose},
+                                 {"isclose", 6, isclose},
                                  {"deallocate", 1, deallocate}};
 
 // Update the NIF initialization

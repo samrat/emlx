@@ -47,6 +47,30 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def argmax(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def argmin(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def cumulative_sum(_array, _axis, _reverse, _inclusive, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def cumulative_product(_array, _axis, _reverse, _inclusive, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def cumulative_max(_array, _axis, _reverse, _inclusive, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def cumulative_min(_array, _axis, _reverse, _inclusive, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def shape(_array) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -76,6 +100,18 @@ defmodule EMLX.NIF do
   end
 
   def scalar_tensor(_value, _type, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def stack(_tensors, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def where(_condition, _on_true, _on_false, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def take_along_axis(_tensor, _indices, _axis, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -251,6 +287,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def bitwise_not(_a, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def left_shift(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -300,6 +340,18 @@ defmodule EMLX.NIF do
   end
 
   def logical_or(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def logical_xor(_a, _b, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def allclose(_a, _b, _atol, _rtol, _equal_nan, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def isclose(_a, _b, _atol, _rtol, _equal_nan, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

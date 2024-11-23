@@ -124,8 +124,9 @@ defmodule EMLX.Backend do
   defp to_mlx_type({:s, 64}), do: :int64
   defp to_mlx_type({:f, 16}), do: :float16
   defp to_mlx_type({:f, 32}), do: :float32
-  defp to_mlx_type({:bf, 16}), do: :float32
-  defp to_mlx_type(:bool), do: :bfloat16
+  defp to_mlx_type({:bf, 16}), do: :bfloat16
+  defp to_mlx_type({:c, 64}), do: :complex64
+  defp to_mlx_type(:bool), do: :bool
 
   defp to_nx_type(:uint8), do: {:u, 8}
   defp to_nx_type(:uint16), do: {:u, 16}
@@ -138,6 +139,7 @@ defmodule EMLX.Backend do
   defp to_nx_type(:float16), do: {:f, 16}
   defp to_nx_type(:float32), do: {:f, 32}
   defp to_nx_type(:bfloat16), do: {:bf, 16}
+  defp to_nx_type(:complex64), do: {:c, 64}
   defp to_nx_type(:bool), do: :bool
 
   defp check_shape_and_type!(device_ref, expected_shape, expected_type) do
@@ -250,7 +252,7 @@ defmodule EMLX.Backend do
     EMLX.broadcast_to(aten, shape) |> to_nx(out)
   end
 
-  # Aggregation
+  # Aggregation (axes)
   ops = [:all, :any, :sum, :product]
 
   for op <- ops do
@@ -269,12 +271,96 @@ defmodule EMLX.Backend do
       # Get the actual shape after summation
       actual_shape = EMLX.shape(result)
       # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
-      scalar_type = EMLX.scalar_type(result)
+      # scalar_type = EMLX.scalar_type(result)
 
       # Create a new output tensor with the correct shape
       %{out | shape: actual_shape}
       |> then(&to_nx(result, &1))
     end
+  end
+
+  # Aggregation (axis)
+  ops = [:argmax, :argmin]
+  for op <- ops do
+    @impl true
+    def unquote(op)(out, tensor, opts) do
+      axis = opts[:axis] || 0
+      keep_axes = opts[:keep_axes] || false
+
+      # Calculate the expected output shape based on the input shape and axes
+      result =
+        tensor
+        |> from_nx()
+        |> EMLX.unquote(op)(axis, keep_axes)
+        |> EMLX.to_type(to_mlx_type(out.type))
+
+      # Get the actual shape after summation
+      actual_shape = EMLX.shape(result)
+      # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
+      # scalar_type = EMLX.scalar_type(result)
+
+      # Create a new output tensor with the correct shape
+      %{out | shape: actual_shape}
+      |> then(&to_nx(result, &1))
+    end
+  end
+
+  ops = [:cumulative_sum, :cumulative_product, :cumulative_max, :cumulative_min]
+  for op <- ops do
+    @impl true
+    def unquote(op)(out, tensor, opts) do
+      axis = opts[:axis] || 0
+      reverse = opts[:reverse] || false
+
+      # Calculate the expected output shape based on the input shape and axes
+      inclusive = true
+      result =
+        tensor
+        |> from_nx()
+        |> EMLX.unquote(op)(axis, reverse, inclusive)
+        |> EMLX.to_type(to_mlx_type(out.type))
+
+      # Get the actual shape after summation
+      actual_shape = EMLX.shape(result)
+      # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
+      # scalar_type = EMLX.scalar_type(result)
+
+      # Create a new output tensor with the correct shape
+      %{out | shape: actual_shape}
+      |> then(&to_nx(result, &1))
+    end
+  end
+
+  @impl true
+  def stack(out, tensors, axis) do
+    tensors
+    |> Enum.map(&from_nx/1)
+    |> EMLX.stack(axis)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def select(out, pred, on_true, on_false) do
+    on_true = Nx.as_type(on_true, Nx.type(out))
+    on_false = Nx.as_type(on_false, Nx.type(out))
+    on_true_torch = from_nx(on_true)
+    on_false_torch = from_nx(on_false)
+
+    # Use logical_not to convert any tensor to a boolean tensor
+    # because of that, we have to swap true/false tensor
+    pred
+    |> from_nx()
+    |> EMLX.logical_not()
+    |> EMLX.where(on_false_torch, on_true_torch)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def take_along_axis(out, tensor, idx, axis) do
+    tensor
+    |> from_nx()
+    |> EMLX.take_along_axis(from_nx(idx), axis)
+    |> to_nx(out)
   end
 
   @impl true
@@ -313,44 +399,8 @@ defmodule EMLX.Backend do
 
   # Unary Ops
 
-  ops =
-    [
-      :abs,
-      :ceil,
-      :conjugate,
-      :floor,
-      :negate,
-      :round,
-      :sign,
-      :real,
-      :imag,
-      :is_nan,
-      :is_infinity,
-      :logical_not
-    ] ++
-      [
-        :sigmoid,
-        :asin,
-        :asinh,
-        :acos,
-        :acosh,
-        :atan,
-        :atanh,
-        :cos,
-        :cosh,
-        :erf,
-        :erf_inv,
-        :exp,
-        :expm1,
-        :log,
-        :log1p,
-        :rsqrt,
-        :sin,
-        :sinh,
-        :sqrt,
-        :tan,
-        :tanh
-      ]
+  ops = [:abs, :ceil, :conjugate, :floor, :negate, :round, :sign, :real, :imag, :is_nan, :is_infinity, :logical_not, :bitwise_not] ++
+        [:sigmoid, :asin, :asinh, :acos, :acosh, :atan, :atanh, :cos, :cosh, :erf, :erf_inv, :exp, :expm1, :log, :log1p, :rsqrt, :sin, :sinh, :sqrt, :tan, :tanh]
 
   for op <- ops do
     @impl true
@@ -375,6 +425,16 @@ defmodule EMLX.Backend do
       |> EMLX.to_type(to_mlx_type(out.type))
       |> to_nx(out)
     end
+  end
+
+  @impl true
+  def all_close(out, a, b, opts) do
+    atol = opts[:atol] || 1.0e-4
+    rtol = opts[:rtol] || 1.0e-8
+    equal_nan = true
+
+    EMLX.allclose(from_nx(a), from_nx(b), atol, rtol, equal_nan)
+    |> to_nx(out)
   end
 
   defp bitmask({device, _} = tensor, {:u, 16}),

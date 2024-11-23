@@ -51,7 +51,7 @@ defmodule EMLX.MixProject do
   end
 
   defp libmlx_config() do
-    version = System.get_env("LIBMLX_VERSION", "0.20.0")
+    version = System.get_env("LIBMLX_VERSION", "0.21.0")
 
     %{
       version: version,

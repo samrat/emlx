@@ -137,6 +137,7 @@ defmodule EMLX do
   deftensor bitwise_and(tensorA, tensorB)
   deftensor bitwise_or(tensorA, tensorB)
   deftensor bitwise_xor(tensorA, tensorB)
+  deftensor bitwise_not(tensor)
   deftensor left_shift(tensorA, tensorB)
   deftensor right_shift(tensorA, tensorB)
   deftensor min(tensorA, tensorB)
@@ -150,6 +151,9 @@ defmodule EMLX do
   deftensor less_equal(tensorA, tensorB)
   deftensor logical_and(tensorA, tensorB)
   deftensor logical_or(tensorA, tensorB)
+  deftensor logical_xor(tensorA, tensorB)
+  deftensor allclose(tensorA, tensorB, rtol, atol, equal_nan)
+  deftensor isclose(tensorA, tensorB, rtol, atol, equal_nan)
   def tensordot(tensorA, tensorB, axesA, axesB),
     do: tensordot(tensorA, tensorB, axesA, [], axesB, [])
 
@@ -196,6 +200,15 @@ defmodule EMLX do
   deftensor any(tensor, axes, keep_axes)
   deftensor sum(tensor, axes, keep_axes)
   deftensor product(tensor, axes, keep_axes)
+  deftensor argmax(tensor, axes, keep_axes)
+  deftensor argmin(tensor, axes, keep_axes)
+  deftensor cumulative_sum(tensor, axis, reverse, inclusive)
+  deftensor cumulative_product(tensor, axis, reverse, inclusive)
+  deftensor cumulative_max(tensor, axis, reverse, inclusive)
+  deftensor cumulative_min(tensor, axis, reverse, inclusive)
+  deftensor stack(tensors, axis)
+  deftensor where(tensorPred, tensorTrue, tensorFalse)
+  deftensor take_along_axis(tensor, tensorIndices, axis)
 
   ## Dirty non-tensor return values
   defvalue to_blob(tensor)
