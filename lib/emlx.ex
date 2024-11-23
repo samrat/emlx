@@ -154,10 +154,9 @@ defmodule EMLX do
   deftensor logical_xor(tensorA, tensorB)
   deftensor allclose(tensorA, tensorB, rtol, atol, equal_nan)
   deftensor isclose(tensorA, tensorB, rtol, atol, equal_nan)
-  def tensordot(tensorA, tensorB, axesA, axesB),
-    do: tensordot(tensorA, tensorB, axesA, [], axesB, [])
 
-  deftensor tensordot(tensorA, tensorB, axesA, batchA, axesB, batchB)
+  deftensor tensordot(tensorA, tensorB, axesA, axesB)
+  deftensor transpose(tensor, axes)
 
   ## Unary ops
   deftensor abs(tensor)
@@ -236,11 +235,12 @@ defmodule EMLX do
   defp prepare_tensors_list!(tensors_list, dev) do
     tensors =
       Enum.map(tensors_list, fn
-        {^dev, ref} when is_tensor(dev, ref) ->
+        {dev, ref} when is_tensor(dev, ref) ->
           ref
 
-        {other_dev, ref} when is_tensor(other_dev, ref) ->
-          raise ArgumentError, "cannot perform operation across devices #{dev} and #{other_dev}"
+        # TODO: double check if this is correct / does not have overhead
+        # {other_dev, ref} when is_tensor(other_dev, ref) ->
+        #   raise ArgumentError, "cannot perform operation across devices #{dev} and #{other_dev}"
 
         bad_tensor ->
           raise ArgumentError, "expected a EMLX tensor, got: #{inspect(bad_tensor)}"
@@ -254,11 +254,12 @@ defmodule EMLX do
       {dev, ref}, nil when is_tensor(dev, ref) ->
         {ref, dev}
 
-      {dev, ref}, dev when is_tensor(dev, ref) ->
+      {dev, ref}, _dev when is_tensor(dev, ref) ->
         {ref, dev}
 
-      {dev, ref}, other_dev when is_tensor(dev, ref) ->
-        raise ArgumentError, "cannot perform operation across devices #{dev} and #{other_dev}"
+        # TODO: double check if this is correct / does not have overhead
+      # {dev, ref}, other_dev when is_tensor(dev, ref) ->
+      #   raise ArgumentError, "cannot perform operation across devices #{dev} and #{other_dev}"
 
       [{dev, ref} | _] = tensors, nil when is_tensor(dev, ref) ->
         prepare_tensors_list!(tensors, dev)
@@ -278,6 +279,10 @@ defmodule EMLX do
   def eval(tensor) do
     NIF.eval(tensor)
   end
+
+  deftensor slice(tensor, starts, stops, strides)
+  deftensor squeeze(tensor, axes)
+  defvalue item(tensor)
 
   @behaviour Nx.Defn.Compiler
 

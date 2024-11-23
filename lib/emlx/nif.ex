@@ -3,6 +3,18 @@ defmodule EMLX.NIF do
   Elixir bindings for MLX array operations.
   """
 
+  def item(_tensor) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def slice(_tensor, _starts, _stops, _strides, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def squeeze(_tensor, _axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def eval(_tensor) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -95,7 +107,11 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def tensordot(_a, _b, _axes_a, _axes_b, _device) do
+  def tensordot(_a, _b, _axesA, _axesB, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def transpose(_tensor, _axes, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

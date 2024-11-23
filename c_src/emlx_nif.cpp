@@ -391,6 +391,14 @@ NIF(tensordot) {
   TENSOR(mlx::core::tensordot(*a, *b, axes1, axes2, device));
 }
 
+NIF(transpose) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::transpose(*t, axes, device));
+}
+
 NIF(eval) {
   TENSOR_PARAM(0, t);
   mlx::core::eval(*t);
@@ -657,11 +665,48 @@ NIF(isclose) {
   TENSOR(mlx::core::isclose(*a, *b, rtol, atol, equal_nan, device));
 }
 
+NIF(item) {
+  TENSOR_PARAM(0, t);
+  mlx::core::eval(*t);
+  auto dtype_kind = mlx::core::kindof(t->dtype());
+
+  if (dtype_kind == mlx::core::Dtype::Kind::u ||
+      dtype_kind == mlx::core::Dtype::Kind::i ||
+      dtype_kind == mlx::core::Dtype::Kind::b) {
+    int64_t value = t->item<int64_t>();
+    return nx::nif::ok(env, nx::nif::make(env, value));
+  }
+  else {
+    double value = t->item<double>();
+    return nx::nif::ok(env, nx::nif::make(env, value));
+  }
+}
+
+
+NIF(slice) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, starts);
+  LIST_PARAM(2, std::vector<int>, stops);
+  LIST_PARAM(3, std::vector<int>, strides);
+  DEVICE_PARAM(4, device);
+  TENSOR(mlx::core::slice(*t, starts, stops, strides, device));
+}
+
+NIF(squeeze) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  DEVICE_PARAM(2, device);
+  TENSOR(mlx::core::squeeze(*t, axes, device));
+}
+
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},
                                  {"stack", 3, stack},
                                  {"where", 4, where},
                                  {"take_along_axis", 4, take_along_axis},
+                                 {"slice", 5, slice},
+                                 {"squeeze", 3, squeeze},
+                                 {"item", 1, item},
                                  {"all", 4, all},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
@@ -685,6 +730,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"eye", 4, eye},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},
+                                 {"transpose", 3, transpose},
                                  {"abs", 2, abs},
                                  {"ceil", 2, ceil},
                                  {"conjugate", 2, conjugate},

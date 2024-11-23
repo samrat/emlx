@@ -87,6 +87,50 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
+  @impl true
+  def slice(
+        out,
+        %T{shape: input_shape} = t,
+        start_indices,
+        lengths,
+        strides
+      ) do
+    t
+    |> from_nx()
+    |> mlx_slice(input_shape, start_indices, lengths, strides)
+    |> to_nx(out)
+  end
+
+  defp mlx_slice(t, input_shape, start_indices, lengths, strides) do
+    starts =
+      start_indices
+      |> Enum.zip(lengths)
+      |> Enum.with_index(fn {start, len}, axis ->
+        to_number(start) |> dbg()
+        min(to_number(start), elem(input_shape, axis) - len)
+      end)
+
+    stops = Enum.zip_with(starts, lengths, &(&1 + &2))
+
+    EMLX.slice(t, starts, stops, strides)
+  end
+
+  @impl true
+  def squeeze(out, tensor, axes) do
+    tensor
+    |> from_nx()
+    |> EMLX.squeeze(axes)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def transpose(out, tensor, axes) do
+    tensor
+    |> from_nx()
+    |> EMLX.transpose(axes)
+    |> to_nx(out)
+  end
+
   defp maybe_pad_binary(bin, {:u, size}) when size in [16, 32] do
     double_size = size * 2
     for <<x::native-size(size) <- bin>>, into: <<>>, do: <<x::native-size(double_size)>>
@@ -104,6 +148,7 @@ defmodule EMLX.Backend do
 
   defp maybe_add_signature(result, %T{data: %Backend{ref: {device, ref}}}) do
     ~c"#Ref<" ++ rest = :erlang.ref_to_list(ref)
+
     Inspect.Algebra.concat([
       "EMLX.Backend<#{device}, ",
       List.to_string(rest),
@@ -143,6 +188,9 @@ defmodule EMLX.Backend do
   defp to_nx_type(:bfloat16), do: {:bf, 16}
   defp to_nx_type(:complex64), do: {:c, 64}
   defp to_nx_type(:bool), do: :bool
+
+  defp to_number(n) when is_number(n), do: n
+  defp to_number(%T{} = t), do: t |> from_nx() |> EMLX.item()
 
   defp check_shape_and_type!(device_ref, expected_shape, expected_type) do
     actual_shape = EMLX.shape(device_ref)
@@ -283,6 +331,7 @@ defmodule EMLX.Backend do
 
   # Aggregation (axis)
   ops = [:argmax, :argmin]
+
   for op <- ops do
     @impl true
     def unquote(op)(out, tensor, opts) do
@@ -308,6 +357,7 @@ defmodule EMLX.Backend do
   end
 
   ops = [:cumulative_sum, :cumulative_product, :cumulative_max, :cumulative_min]
+
   for op <- ops do
     @impl true
     def unquote(op)(out, tensor, opts) do
@@ -316,6 +366,7 @@ defmodule EMLX.Backend do
 
       # Calculate the expected output shape based on the input shape and axes
       inclusive = true
+
       result =
         tensor
         |> from_nx()
@@ -382,13 +433,23 @@ defmodule EMLX.Backend do
         %T{type: left_type} = left,
         left_axes,
         # MLX doesn't support batched axes
-        _left_batched_axes,
+        left_batched_axes,
         %T{type: right_type} = right,
         right_axes,
-        _right_batched_axes
+        right_batched_axes
       ) do
     left_tx = from_nx(left)
     right_tx = from_nx(right)
+
+    # TODO: MLX doesn't support batched axes, so we can do an outer loop in Elixir instead
+
+    if left_batched_axes != [] or right_batched_axes != [] do
+      raise "MLX doesn't support batched axes in tensordot"
+    end
+
+    if not Nx.Type.float?(out_type) do
+      raise "MLX only supports floating point output types in tensordot"
+    end
 
     EMLX.tensordot(
       to_typed_ref(left_tx, left_type, out_type),
@@ -401,14 +462,63 @@ defmodule EMLX.Backend do
 
   # Unary Ops
 
-  ops = [:abs, :ceil, :conjugate, :floor, :negate, :round, :sign, :real, :imag, :is_nan, :is_infinity, :logical_not, :bitwise_not] ++
-        [:sigmoid, :asin, :asinh, :acos, :acosh, :atan, :atanh, :cos, :cosh, :erf, :erf_inv, :exp, :expm1, :log, :log1p, :rsqrt, :sin, :sinh, :sqrt, :tan, :tanh]
+  ops =
+    [
+      :abs,
+      :ceil,
+      :conjugate,
+      :floor,
+      :negate,
+      :round,
+      :sign,
+      :real,
+      :imag,
+      :is_nan,
+      :is_infinity,
+      :logical_not,
+      :bitwise_not
+    ] ++
+      [
+        :sigmoid,
+        :asin,
+        :asinh,
+        :acos,
+        :acosh,
+        :atan,
+        :atanh,
+        :cos,
+        :cosh,
+        :erf,
+        :erf_inv,
+        :exp,
+        :expm1,
+        :log,
+        :log1p,
+        :rsqrt,
+        :sin,
+        :sinh,
+        :sqrt,
+        :tan,
+        :tanh
+      ]
 
   for op <- ops do
     @impl true
     def unquote(op)(out, tensor) do
       EMLX.unquote(op)(from_nx(tensor)) |> to_nx(out)
     end
+  end
+
+  @impl true
+  def erfc(out, tensor) do
+    t = from_nx(tensor)
+
+    out_type = to_mlx_type(out.type)
+    {dev, _} = erf = EMLX.erf(t) |> EMLX.to_type(out_type)
+
+    EMLX.scalar_tensor(1, out_type, dev)
+    |> EMLX.subtract(erf)
+    |> to_nx(out)
   end
 
   # Binary Ops
