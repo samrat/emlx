@@ -123,6 +123,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def concatenate(_tensors, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def where(_condition, _on_true, _on_false, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
