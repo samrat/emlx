@@ -102,9 +102,11 @@ defmodule EMLX.Backend do
 
   defp maybe_pad_binary(bin, _), do: bin
 
-  defp maybe_add_signature(result, %T{data: %Backend{ref: _}}) do
+  defp maybe_add_signature(result, %T{data: %Backend{ref: {device, ref}}}) do
+    ~c"#Ref<" ++ rest = :erlang.ref_to_list(ref)
     Inspect.Algebra.concat([
-      "EMLX.Backend",
+      "EMLX.Backend<#{device}, ",
+      List.to_string(rest),
       Inspect.Algebra.line(),
       result
     ])
