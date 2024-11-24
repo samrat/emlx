@@ -403,6 +403,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def view(_tensor, _type, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   @on_load :load_nifs
   def load_nifs do
     path = :filename.join(:code.priv_dir(:emlx), ~c"libemlx")

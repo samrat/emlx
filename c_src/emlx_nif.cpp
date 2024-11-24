@@ -757,8 +757,16 @@ NIF(ifft2) {
   TENSOR(mlx::core::fft::ifft2(*t, n, axes, device));
 }
 
+NIF(view) {
+  TENSOR_PARAM(0, t);
+  TYPE_PARAM(1, type);
+  DEVICE_PARAM(3, device);
+  TENSOR(mlx::core::view(*t, type, device));
+}
+
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},
+                                 {"view", 3, view},
                                  {"stack", 3, stack},
                                  {"where", 4, where},
                                  {"concatenate", 3, concatenate},

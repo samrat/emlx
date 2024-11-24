@@ -125,6 +125,7 @@ defmodule EMLX do
   deftensor reshape(tensor, shape)
   deftensor broadcast_to(tensor, shape)
   deftensor to_type(tensor, type)
+  deftensor view(tensor, type)
 
   ## Binary ops
   deftensor add(tensorA, tensorB)

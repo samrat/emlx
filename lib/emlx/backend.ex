@@ -105,7 +105,6 @@ defmodule EMLX.Backend do
       start_indices
       |> Enum.zip(lengths)
       |> Enum.with_index(fn {start, len}, axis ->
-        to_number(start) |> dbg()
         min(to_number(start), elem(input_shape, axis) - len)
       end)
 
@@ -127,6 +126,14 @@ defmodule EMLX.Backend do
     tensor
     |> from_nx()
     |> EMLX.transpose(axes)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def bitcast(out, tensor) do
+    tensor
+    |> from_nx()
+    |> EMLX.view(to_mlx_type(out.type))
     |> to_nx(out)
   end
 
@@ -399,7 +406,6 @@ defmodule EMLX.Backend do
         {start, start + len}
       end)
       |> Enum.unzip()
-
 
     slice_tx = slice |> from_nx() |> EMLX.to_type(to_mlx_type(out.type))
 
