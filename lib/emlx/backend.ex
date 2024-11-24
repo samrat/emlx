@@ -662,6 +662,46 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
+  @impl true
+  def clip(out, tensor, min, max) do
+    tensor
+    |> from_nx()
+    |> EMLX.clip(min, max)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def sort(out, tensor, opts) do
+    axis = opts[:axis]
+    asc? = opts[:direction] == :asc
+
+    t = tensor |> from_nx() |> EMLX.sort(axis)
+
+    if asc? do
+      to_nx(t, out)
+    else
+      t
+      |> to_nx(out)
+      |> Nx.reverse(axes: [axis])
+    end
+  end
+
+  @impl true
+  def argsort(out, tensor, opts) do
+    axis = opts[:axis]
+    asc? = opts[:direction] == :asc
+
+    t = tensor |> from_nx() |> EMLX.argsort(axis)
+
+    if asc? do
+      to_nx(t, out)
+    else
+      t
+      |> to_nx(out)
+      |> Nx.reverse(axes: [axis])
+    end
+  end
+
   defp maybe_upcast(%T{type: t} = left, %T{type: t} = right),
     do: {left, right}
 

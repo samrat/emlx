@@ -398,6 +398,22 @@ NIF(transpose) {
   TENSOR(mlx::core::transpose(*t, axes, device));
 }
 
+NIF(sort) {
+  TENSOR_PARAM(0, t);
+  PARAM(1, int, axis);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::sort(*t, axis, device));
+}
+
+NIF(argsort) {
+  TENSOR_PARAM(0, t);
+  PARAM(1, int, axis);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::argsort(*t, axis, device));
+}
+
 NIF(eval) {
   TENSOR_PARAM(0, t);
   mlx::core::eval(*t);
@@ -784,6 +800,14 @@ NIF(min) {
   TENSOR(mlx::core::min(*t, axes, keep_axes, device));
 }
 
+NIF(clip) {
+  TENSOR_PARAM(0, t);
+  TENSOR_PARAM(1, min);
+  TENSOR_PARAM(2, max);
+  DEVICE_PARAM(3, device);
+  TENSOR(mlx::core::clip(*t, *min, *max, device));
+}
+
 NIF(strides) {
   TENSOR_PARAM(0, t);
 
@@ -843,6 +867,8 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},
                                  {"transpose", 3, transpose},
+                                 {"sort", 3, sort},
+                                 {"argsort", 3, argsort},
                                  {"abs", 2, abs},
                                  {"ceil", 2, ceil},
                                  {"conjugate", 2, conjugate},
@@ -907,7 +933,8 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"isclose", 6, isclose},
                                  {"deallocate", 1, deallocate},
                                  {"max", 4, max},
-                                 {"min", 4, min}};
+                                 {"min", 4, min},
+                                 {"clip", 4, clip}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)

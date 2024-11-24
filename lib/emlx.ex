@@ -161,6 +161,8 @@ defmodule EMLX do
 
   deftensor tensordot(tensorA, tensorB, axesA, axesB)
   deftensor transpose(tensor, axes)
+  deftensor sort(tensor, axis)
+  deftensor argsort(tensor, axis)
 
   ## Unary ops
   deftensor abs(tensor)
@@ -219,6 +221,7 @@ defmodule EMLX do
   deftensor take(tensor, tensorIndices, axis)
   deftensor max(tensor, axes, keep_axes)
   deftensor min(tensor, axes, keep_axes)
+  deftensor clip(tensor, tensor_min, tensor_max)
 
   ## Dirty non-tensor return values
   defvalue to_blob(tensor)

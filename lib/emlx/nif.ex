@@ -139,6 +139,14 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def sort(_tensor, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def argsort(_tensor, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def scalar_tensor(_value, _type, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -432,6 +440,10 @@ defmodule EMLX.NIF do
   end
 
   def min(_tensor, _axes, _keep_axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def clip(_tensor, _min, _max, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
