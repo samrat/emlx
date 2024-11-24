@@ -3,6 +3,10 @@ defmodule EMLX.NIF do
   Elixir bindings for MLX array operations.
   """
 
+  def strides(_tensor) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def item(_tensor) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -59,6 +63,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def mean(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def product(_array, _axes, _keep_dims, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -96,6 +104,10 @@ defmodule EMLX.NIF do
   end
 
   def shape(_array) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def as_strided(_tensor, _shape, _strides, _offset, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

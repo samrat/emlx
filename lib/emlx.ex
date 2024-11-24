@@ -121,6 +121,7 @@ defmodule EMLX do
   deftensor reshape(tensor, shape)
   deftensor broadcast_to(tensor, shape)
   deftensor astype(tensor, type)
+  deftensor as_strided(tensor, shape, strides, offset)
   deftensor view(tensor, type)
 
   ## Binary ops
@@ -201,6 +202,7 @@ defmodule EMLX do
   deftensor all(tensor, axes, keep_axes)
   deftensor any(tensor, axes, keep_axes)
   deftensor sum(tensor, axes, keep_axes)
+  deftensor mean(tensor, axes, keep_axes)
   deftensor product(tensor, axes, keep_axes)
   deftensor argmax(tensor, keep_axes)
   deftensor argmax(tensor, axes, keep_axes)
@@ -289,6 +291,7 @@ defmodule EMLX do
   deftensor slice_update(tensor, tensor_updates, starts, stops)
   deftensor squeeze(tensor, axes)
   defvalue item(tensor)
+  defvalue strides(tensor)
 
   @behaviour Nx.Defn.Compiler
 

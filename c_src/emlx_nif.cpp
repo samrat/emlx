@@ -498,6 +498,7 @@ NIF(take) {
 REDUCTION_AXES_OP(all)
 REDUCTION_AXES_OP(any)
 REDUCTION_AXES_OP(sum)
+REDUCTION_AXES_OP(mean)
 REDUCTION_AXES_OP2(product, prod)
 REDUCTION_AXIS_OP(argmax)
 REDUCTION_AXIS_OP(argmin)
@@ -783,7 +784,27 @@ NIF(min) {
   TENSOR(mlx::core::min(*t, axes, keep_axes, device));
 }
 
-static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
+NIF(strides) {
+  TENSOR_PARAM(0, t);
+
+  auto strides = t->strides();
+
+  return nx::nif::ok(env, nx::nif::make_list(env, strides));
+}
+
+NIF(as_strided) {
+  TENSOR_PARAM(0, t);
+  TUPLE_PARAM(1, std::vector<int>, shape);
+  LIST_PARAM(2, std::vector<size_t>, strides);
+  PARAM(3, int, offset);
+  DEVICE_PARAM(4, device);
+
+  TENSOR(mlx::core::as_strided(*t, shape, strides, offset, device));
+}
+
+static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
+                                 {"as_strided", 5, as_strided},
+                                 {"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},
                                  {"view", 3, view},
                                  {"stack", 3, stack},
@@ -798,6 +819,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"all", 4, all},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
+                                 {"mean", 4, mean},
                                  {"product", 4, product},
                                  {"argmax", 3, argmax},
                                  {"argmax", 4, argmax},

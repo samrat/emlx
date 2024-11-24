@@ -294,7 +294,7 @@ defmodule EMLX.Backend do
   end
 
   # Aggregation (axes)
-  ops = [:all, :any, :sum, :product]
+  ops = [:all, :any, :sum, :product, :mean]
 
   for op <- ops do
     @impl true
@@ -790,6 +790,45 @@ defmodule EMLX.Backend do
     |> from_nx()
     |> EMLX.min(axes, keep_axes)
     |> to_nx(out)
+  end
+
+  for op <- [:sum, :product, :max, :min] do
+    @impl true
+    def unquote(:"window_#{op}")(out, tensor, window_shape, opts) do
+      # TODO: add strides and dilations
+
+      tensor_rank = tuple_size(tensor.shape)
+      window_rank = tuple_size(window_shape)
+
+      axes =
+        0..(tuple_size(window_shape) - 1)
+        |> Enum.to_list()
+        |> Enum.map(fn axis ->
+          tensor_rank + axis
+        end)
+
+      tensor
+      |> from_nx()
+      |> sliding_window_view(tensor.shape, window_shape)
+      |> EMLX.unquote(op)(axes, false)
+      |> to_nx(out)
+    end
+  end
+
+  defp sliding_window_view(t, tensor_shape, window_shape) do
+    strides = EMLX.strides(t)
+
+    strides = strides ++ strides
+    window_shape_list = Tuple.to_list(window_shape)
+
+    shape_trimmed =
+      Enum.zip_with(Tuple.to_list(tensor_shape), window_shape_list, fn current, dim ->
+        current - dim + 1
+      end)
+
+    out_shape = List.to_tuple(shape_trimmed ++ window_shape_list)
+
+    EMLX.as_strided(t, out_shape, strides, 0)
   end
 
   # Helper function to handle different scalar types
