@@ -230,7 +230,7 @@ NIF(reshape) {
   TENSOR(mlx::core::reshape(*t, shape, device));
 }
 
-NIF(to_type) {
+NIF(astype) {
   TENSOR_PARAM(0, t);
   TYPE_PARAM(1, type);
   DEVICE_PARAM(2, device);
@@ -471,11 +471,16 @@ NIF(take) {
 #define REDUCTION_AXIS_OP2(OP, NATIVE_OP)                                      \
   NIF(OP) {                                                                    \
     TENSOR_PARAM(0, tensor);                                                   \
-    PARAM(1, int, axis);                                                       \
-    PARAM(2, bool, keep_dims);                                                 \
-    DEVICE_PARAM(3, device);                                                   \
-                                                                               \
-    TENSOR(mlx::core::NATIVE_OP(*tensor, axis, keep_dims, device));            \
+    if (argc == 3) {                                                           \
+      PARAM(1, bool, keep_dims);                                               \
+      DEVICE_PARAM(2, device);                                                 \
+      TENSOR(mlx::core::NATIVE_OP(*tensor, keep_dims, device));                \
+    } else {                                                                   \
+      PARAM(1, int, axis);                                                     \
+      PARAM(2, bool, keep_dims);                                               \
+      DEVICE_PARAM(3, device);                                                 \
+      TENSOR(mlx::core::NATIVE_OP(*tensor, axis, keep_dims, device));          \
+    }                                                                          \
   }
 
 #define REDUCTION_AXIS_REVERSIBLE_OP(OP) REDUCTION_AXIS_REVERSIBLE_OP2(OP, OP)
@@ -794,7 +799,9 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
                                  {"product", 4, product},
+                                 {"argmax", 3, argmax},
                                  {"argmax", 4, argmax},
+                                 {"argmin", 3, argmin},
                                  {"argmin", 4, argmin},
                                  {"cumulative_sum", 5, cumulative_sum},
                                  {"cumulative_product", 5, cumulative_product},
@@ -802,7 +809,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"cumulative_min", 5, cumulative_min},
                                  {"shape", 1, shape},
                                  {"reshape", 3, reshape},
-                                 {"to_type", 3, to_type},
+                                 {"astype", 3, astype},
                                  {"to_blob", 1, to_blob},
                                  {"to_blob", 2, to_blob},
                                  {"from_blob", 4, from_blob},

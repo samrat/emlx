@@ -31,7 +31,7 @@ defmodule EMLX.Backend do
     # Convert if needed (similar to the torch byte conversion)
     array =
       if needs_type_conversion?(type, mlx_type) do
-        EMLX.to_type(device_ref, to_mlx_type(type))
+        EMLX.astype(device_ref, to_mlx_type(type))
       else
         device_ref
       end
@@ -227,7 +227,7 @@ defmodule EMLX.Backend do
 
   @impl true
   def constant(
-        %T{shape: shape, names: names, type: type} = out,
+        %T{shape: shape, names: names, type: type},
         scalar,
         backend_options
       )
@@ -252,7 +252,7 @@ defmodule EMLX.Backend do
   end
 
   @impl true
-  def iota(%{shape: {}, type: type} = out, nil, backend_options) do
+  def iota(%{shape: {}} = out, nil, backend_options) do
     constant(out, 0, backend_options)
   end
 
@@ -264,7 +264,7 @@ defmodule EMLX.Backend do
       Nx.Type.integer?(type),
       device_option(backend_options)
     )
-    |> EMLX.to_type(to_mlx_type(type))
+    |> EMLX.astype(to_mlx_type(type))
     |> EMLX.reshape(shape)
     |> to_nx(out)
   end
@@ -272,7 +272,7 @@ defmodule EMLX.Backend do
   @impl true
   def iota(%T{shape: {n}, type: type} = out, 0, backend_options) do
     EMLX.arange(0, n, 1, Nx.Type.integer?(type), device_option(backend_options))
-    |> EMLX.to_type(to_mlx_type(type))
+    |> EMLX.astype(to_mlx_type(type))
     |> to_nx(out)
   end
 
@@ -283,7 +283,7 @@ defmodule EMLX.Backend do
     # build the iota in one dimension
     aten =
       EMLX.arange(0, dim, 1, Nx.Type.integer?(type), device_option(backend_options))
-      |> EMLX.to_type(to_mlx_type(type))
+      |> EMLX.astype(to_mlx_type(type))
 
     # reshape the tensor above to be have shape where everything is 1, except for dim
     reshape = Tuple.duplicate(1, Nx.rank(shape)) |> put_elem(axis, dim)
@@ -307,7 +307,7 @@ defmodule EMLX.Backend do
         tensor
         |> from_nx()
         |> EMLX.unquote(op)(axes, keep_axes)
-        |> EMLX.to_type(to_mlx_type(out.type))
+        |> EMLX.astype(to_mlx_type(out.type))
 
       # Get the actual shape after summation
       actual_shape = EMLX.shape(result)
@@ -326,24 +326,20 @@ defmodule EMLX.Backend do
   for op <- ops do
     @impl true
     def unquote(op)(out, tensor, opts) do
-      axis = opts[:axis] || 0
-      keep_axes = opts[:keep_axes] || false
+      axis = opts[:axis]
+      keep_axes = opts[:keep_axes] == true
+      t_tx = from_nx(tensor)
 
-      # Calculate the expected output shape based on the input shape and axes
       result =
-        tensor
-        |> from_nx()
-        |> EMLX.unquote(op)(axis, keep_axes)
-        |> EMLX.to_type(to_mlx_type(out.type))
+        if axis do
+          EMLX.unquote(op)(t_tx, axis, keep_axes)
+        else
+          EMLX.unquote(op)(t_tx, keep_axes)
+        end
 
-      # Get the actual shape after summation
-      actual_shape = EMLX.shape(result)
-      # FIXME: MLX returns whatever the original type is, but Nx expects u8 -> u32
-      # scalar_type = EMLX.scalar_type(result)
-
-      # Create a new output tensor with the correct shape
-      %{out | shape: actual_shape}
-      |> then(&to_nx(result, &1))
+      result
+      |> EMLX.astype(to_mlx_type(out.type))
+      |> to_nx(out)
     end
   end
 
@@ -362,7 +358,7 @@ defmodule EMLX.Backend do
         tensor
         |> from_nx()
         |> EMLX.unquote(op)(axis, reverse, inclusive)
-        |> EMLX.to_type(to_mlx_type(out.type))
+        |> EMLX.astype(to_mlx_type(out.type))
 
       # Get the actual shape after summation
       actual_shape = EMLX.shape(result)
@@ -407,10 +403,10 @@ defmodule EMLX.Backend do
       end)
       |> Enum.unzip()
 
-    slice_tx = slice |> from_nx() |> EMLX.to_type(to_mlx_type(out.type))
+    slice_tx = slice |> from_nx() |> EMLX.astype(to_mlx_type(out.type))
 
     input_tx
-    |> EMLX.to_type(to_mlx_type(out.type))
+    |> EMLX.astype(to_mlx_type(out.type))
     |> EMLX.slice_update(slice_tx, start_indices, stop_indices)
     |> to_nx(out)
   end
@@ -549,7 +545,7 @@ defmodule EMLX.Backend do
     t = from_nx(tensor)
 
     out_type = to_mlx_type(out.type)
-    {dev, _} = erf = EMLX.erf(t) |> EMLX.to_type(out_type)
+    {dev, _} = erf = EMLX.erf(t) |> EMLX.astype(out_type)
 
     EMLX.scalar_tensor(1, out_type, dev)
     |> EMLX.subtract(erf)
@@ -568,8 +564,7 @@ defmodule EMLX.Backend do
       result = EMLX.unquote(op)(left_tx, right_tx)
 
       result
-      |> bitmask(out.type)
-      |> EMLX.to_type(to_mlx_type(out.type))
+      |> EMLX.astype(to_mlx_type(out.type))
       |> to_nx(out)
     end
   end
@@ -629,15 +624,6 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
-  defp bitmask({device, _} = tensor, {:u, 16}),
-    do: EMLX.bitwise_and(tensor, EMLX.scalar_tensor(0xFFFF, :int, device))
-
-  defp bitmask({device, _} = tensor, {:u, 32}),
-    do: EMLX.bitwise_and(tensor, EMLX.scalar_tensor(0xFFFF_FFFF, :int64, device))
-
-  defp bitmask(tensor, {_, _}),
-    do: tensor
-
   ops =
     [:divide, :quotient, :remainder, :atan2] ++
       [:right_shift, :logical_and, :logical_or, :logical_xor] ++
@@ -651,7 +637,7 @@ defmodule EMLX.Backend do
       {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
 
       EMLX.unquote(op)(left_tx, right_tx)
-      |> EMLX.to_type(to_mlx_type(out.type))
+      |> EMLX.astype(to_mlx_type(out.type))
       |> to_nx(out)
     end
   end
@@ -659,21 +645,21 @@ defmodule EMLX.Backend do
   @impl true
   def min(out, l, r) do
     {left, right} = maybe_upcast(l, r)
-      {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+    {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
 
-      EMLX.minimum(left_tx, right_tx)
-      |> EMLX.to_type(to_mlx_type(out.type))
-      |> to_nx(out)
+    EMLX.minimum(left_tx, right_tx)
+    |> EMLX.astype(to_mlx_type(out.type))
+    |> to_nx(out)
   end
 
   @impl true
   def max(out, l, r) do
     {left, right} = maybe_upcast(l, r)
-      {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+    {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
 
-      EMLX.maximum(left_tx, right_tx)
-      |> EMLX.to_type(to_mlx_type(out.type))
-      |> to_nx(out)
+    EMLX.maximum(left_tx, right_tx)
+    |> EMLX.astype(to_mlx_type(out.type))
+    |> to_nx(out)
   end
 
   defp maybe_upcast(%T{type: t} = left, %T{type: t} = right),
@@ -738,8 +724,51 @@ defmodule EMLX.Backend do
   end
 
   @impl true
-  def as_type(%T{type: type} = out, %T{} = t),
-    do: from_nx(t) |> EMLX.to_type(to_mlx_type(type)) |> bitmask(type) |> to_nx(out)
+  def as_type(%T{type: type} = out, %T{type: from_type} = t) do
+    t = from_nx(t)
+
+    t
+    |> EMLX.astype(to_mlx_type(type))
+    |> replace_non_finites_for_integer_cast(t, from_type, type)
+    |> to_nx(out)
+  end
+
+  defp replace_non_finites_for_integer_cast(
+         out,
+         tensor,
+         {from_type, _},
+         {:s, _} = to_type
+       )
+       when from_type in [:f, :bf, :c] do
+    # TODO: figure out if this is a bug in MLX (this function shouldn't be necessary, but the mapping for s16 is broken)
+    {device, _} = out
+
+    zero = EMLX.scalar_tensor(0, to_mlx_type(to_type), device)
+    out = EMLX.where(EMLX.is_nan(tensor), zero, out)
+
+    max_scalar =
+      Nx.Constants.max_finite(to_type, backend: {EMLX.Backend, device: device}) |> from_nx()
+
+    min_scalar =
+      Nx.Constants.min_finite(to_type, backend: {EMLX.Backend, device: device}) |> from_nx()
+
+    out =
+      EMLX.is_infinity(tensor)
+      |> EMLX.logical_and(EMLX.greater(tensor, zero))
+      |> EMLX.where(
+        max_scalar,
+        out
+      )
+
+    EMLX.is_infinity(tensor)
+    |> EMLX.logical_and(EMLX.less(tensor, zero))
+    |> EMLX.where(
+      min_scalar,
+      out
+    )
+  end
+
+  defp replace_non_finites_for_integer_cast(out, _, _, _), do: out
 
   @impl true
   def reduce_max(out, tensor, opts) do
@@ -770,8 +799,8 @@ defmodule EMLX.Backend do
   defp to_typed_ref(tensor, expected_type, expected_type),
     do: tensor
 
-  defp to_typed_ref(tensor, ref_type, expected_type),
-    do: EMLX.to_type(tensor, to_mlx_type(expected_type))
+  defp to_typed_ref(tensor, _ref_type, expected_type),
+    do: EMLX.astype(tensor, to_mlx_type(expected_type))
 
   defp device_option(nil), do: :cpu
   defp device_option(backend_opts), do: backend_opts[:device] || :cpu

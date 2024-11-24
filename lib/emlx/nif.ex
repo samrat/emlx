@@ -67,7 +67,15 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def argmax(_array, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def argmin(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def argmin(_array, _keep_dims, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -91,7 +99,7 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def to_type(_array, _type, _device) do
+  def astype(_array, _type, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 

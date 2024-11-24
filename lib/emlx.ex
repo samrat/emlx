@@ -83,15 +83,11 @@ defmodule EMLX.Macro do
   end
 end
 
-
 defmodule EMLX do
   alias EMLX.NIF, as: NIF
   use EMLX.Macro
 
   defguard is_tensor(device, ref) when is_reference(ref) and is_atom(device)
-
-  @doc false
-  def __emlx__, do: @emlx_function
 
   ## Macro callbacks
 
@@ -104,7 +100,7 @@ defmodule EMLX do
   defp normalize_device!(device),
     do: raise(ArgumentError, "expected device to be {atom, index} or atom, got: #{device}")
 
-  defp mlx_device!(device, index) do
+  defp mlx_device!(device, _index) do
     case device do
       :cpu -> :cpu
       :gpu -> :gpu
@@ -124,7 +120,7 @@ defmodule EMLX do
   ## Manipulation
   deftensor reshape(tensor, shape)
   deftensor broadcast_to(tensor, shape)
-  deftensor to_type(tensor, type)
+  deftensor astype(tensor, type)
   deftensor view(tensor, type)
 
   ## Binary ops
@@ -206,7 +202,9 @@ defmodule EMLX do
   deftensor any(tensor, axes, keep_axes)
   deftensor sum(tensor, axes, keep_axes)
   deftensor product(tensor, axes, keep_axes)
+  deftensor argmax(tensor, keep_axes)
   deftensor argmax(tensor, axes, keep_axes)
+  deftensor argmin(tensor, keep_axes)
   deftensor argmin(tensor, axes, keep_axes)
   deftensor cumulative_sum(tensor, axis, reverse, inclusive)
   deftensor cumulative_product(tensor, axis, reverse, inclusive)
@@ -268,10 +266,6 @@ defmodule EMLX do
       {dev, ref}, _dev when is_tensor(dev, ref) ->
         {ref, dev}
 
-        # TODO: double check if this is correct / does not have overhead
-      # {dev, ref}, other_dev when is_tensor(dev, ref) ->
-      #   raise ArgumentError, "cannot perform operation across devices #{dev} and #{other_dev}"
-
       [{dev, ref} | _] = tensors, nil when is_tensor(dev, ref) ->
         prepare_tensors_list!(tensors, dev)
 
@@ -304,16 +298,19 @@ defmodule EMLX do
     # we should automatically convert from binary backend to EMLX backend
     # given a device optionsg
     case Nx.default_backend() do
-       EMLX.Backend -> :ok
-       {EMLX.Backend, _} -> :ok
-       other ->
-         raise ArgumentError, "EMLX can only be used with the EMLX backend, got: #{inspect(other)}"
+      EMLX.Backend ->
+        :ok
+
+      {EMLX.Backend, _} ->
+        :ok
+
+      other ->
+        raise ArgumentError, "EMLX can only be used with the EMLX backend, got: #{inspect(other)}"
     end
 
     fun = __compile__(key, vars, fun, opts)
 
     [result] = fun.(args_list)
-
 
     Nx.Defn.Composite.traverse(result, fn
       %Nx.Tensor{data: %EMLX.Backend{ref: {_device, ref}}} = node ->

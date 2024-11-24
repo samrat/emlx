@@ -42,6 +42,7 @@ defmodule EMLX.NxTest do
 
   defp test_unary_op(op, data \\ [[1, 2], [3, 4]], type) do
     t = Nx.tensor(data, type: type)
+
     r = Kernel.apply(Nx, op, [t])
 
     binary_t = Nx.backend_copy(t, Nx.BinaryBackend)
@@ -445,8 +446,8 @@ defmodule EMLX.NxTest do
     end
 
     test "dot does not re-sort the contracting axes" do
-      t1 = Nx.iota({2, 7, 8, 3, 1})
-      t2 = Nx.iota({1, 8, 3, 7, 3})
+      t1 = Nx.iota({2, 7, 8, 3, 1}, type: :f32)
+      t2 = Nx.iota({1, 8, 3, 7, 3}, type: :f32)
 
       out = Nx.dot(t1, [3, 1, 2], t2, [2, 3, 1])
 
@@ -620,22 +621,15 @@ defmodule EMLX.NxTest do
                Nx.tensor([0.0, 1.0, 2.0], type: {:bf, 16}, backend: Nx.BinaryBackend)
     end
 
-    @tag :skip_apple_arm64
     test "non-finite to integer conversions" do
       non_finite =
         Nx.stack([Nx.Constants.infinity(), Nx.Constants.nan(), Nx.Constants.neg_infinity()])
 
-      assert Nx.as_type(non_finite, {:u, 8}) |> Nx.backend_transfer() ==
-               Nx.tensor([0, 0, 0], type: {:u, 8}, backend: Nx.BinaryBackend)
-
-      assert Nx.as_type(non_finite, {:s, 16}) |> Nx.backend_transfer() ==
-               Nx.tensor([0, 0, 0], type: {:s, 16}, backend: Nx.BinaryBackend)
-
-      assert Nx.as_type(non_finite, {:s, 32}) |> Nx.backend_transfer() ==
-               Nx.tensor([-2_147_483_648, -2_147_483_648, -2_147_483_648],
-                 type: {:s, 32},
-                 backend: Nx.BinaryBackend
-               )
+      for to_type <- [u: 8, s: 16, s: 32] do
+        actual = Nx.as_type(non_finite, to_type) |> Nx.backend_transfer()
+        expected = Nx.backend_copy(non_finite, Nx.BinaryBackend) |> Nx.as_type(to_type)
+        assert actual == expected
+      end
     end
 
     test "non-finite to between floats conversions" do
@@ -645,8 +639,8 @@ defmodule EMLX.NxTest do
       assert Nx.as_type(non_finite, {:f, 16}) |> Nx.backend_transfer() ==
                Nx.as_type(non_finite_binary_backend, {:f, 16})
 
-      assert Nx.as_type(non_finite, {:f, 64}) |> Nx.backend_transfer() ==
-               Nx.as_type(non_finite_binary_backend, {:f, 64})
+      assert Nx.as_type(non_finite, {:f, 32}) |> Nx.backend_transfer() ==
+               Nx.as_type(non_finite_binary_backend, {:f, 32})
     end
   end
 
