@@ -346,19 +346,18 @@ NIF(full) {
 }
 
 NIF(arange) {
+  PARAM(0, int, start);
+  PARAM(1, int, stop);
+  PARAM(2, int, step);
   PARAM(3, bool, integer);
   DEVICE_PARAM(4, device);
 
   if (integer) {
-    PARAM(0, int, start);
-    PARAM(1, int, stop);
-    PARAM(2, int, step);
     TENSOR(mlx::core::arange(start, stop, step, device));
   } else {
-    PARAM(0, double, start);
-    PARAM(1, double, stop);
-    PARAM(2, double, step);
-    TENSOR(mlx::core::arange(start, stop, step, device));
+    TENSOR(mlx::core::arange(static_cast<double>(start),
+                             static_cast<double>(stop),
+                             static_cast<double>(step), device));
   }
 }
 
@@ -481,7 +480,7 @@ NIF(take) {
 
 #define REDUCTION_AXIS_REVERSIBLE_OP(OP) REDUCTION_AXIS_REVERSIBLE_OP2(OP, OP)
 
-#define REDUCTION_AXIS_REVERSIBLE_OP2(OP, NATIVE_OP)                                      \
+#define REDUCTION_AXIS_REVERSIBLE_OP2(OP, NATIVE_OP)                           \
   NIF(OP) {                                                                    \
     TENSOR_PARAM(0, tensor);                                                   \
     PARAM(1, int, axis);                                                       \
@@ -628,8 +627,8 @@ BINARY_OP2(pow, power)
 BINARY_OP2(remainder, remainder)
 BINARY_OP2(divide, divide)
 BINARY_OP2(atan2, arctan2)
-BINARY_OP2(min, minimum)
-BINARY_OP2(max, maximum)
+BINARY_OP2(minimum, minimum)
+BINARY_OP2(maximum, maximum)
 BINARY_OP2(quotient, floor_divide)
 BINARY_OP(bitwise_and)
 BINARY_OP(bitwise_or)
@@ -658,7 +657,8 @@ NIF(logical_xor) {
   DEVICE_PARAM(2, device);
 
   auto t1 = mlx::core::logical_or(*a, *b, device);
-  auto t2 = mlx::core::logical_not(mlx::core::logical_and(*a, *b, device), device);
+  auto t2 =
+      mlx::core::logical_not(mlx::core::logical_and(*a, *b, device), device);
   TENSOR(mlx::core::logical_and(t1, t2, device));
 }
 NIF(allclose) {
@@ -692,13 +692,11 @@ NIF(item) {
       dtype_kind == mlx::core::Dtype::Kind::b) {
     int64_t value = t->item<int64_t>();
     return nx::nif::ok(env, nx::nif::make(env, value));
-  }
-  else {
+  } else {
     double value = t->item<double>();
     return nx::nif::ok(env, nx::nif::make(env, value));
   }
 }
-
 
 NIF(slice) {
   TENSOR_PARAM(0, t);
@@ -762,6 +760,22 @@ NIF(view) {
   TYPE_PARAM(1, type);
   DEVICE_PARAM(3, device);
   TENSOR(mlx::core::view(*t, type, device));
+}
+
+NIF(max) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  PARAM(2, bool, keep_axes);
+  DEVICE_PARAM(3, device);
+  TENSOR(mlx::core::max(*t, axes, keep_axes, device));
+}
+
+NIF(min) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<int>, axes);
+  PARAM(2, bool, keep_axes);
+  DEVICE_PARAM(3, device);
+  TENSOR(mlx::core::min(*t, axes, keep_axes, device));
 }
 
 static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
@@ -844,8 +858,8 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"bitwise_not", 2, bitwise_not},
                                  {"left_shift", 3, left_shift},
                                  {"right_shift", 3, right_shift},
-                                 {"min", 3, min},
-                                 {"max", 3, max},
+                                 {"minimum", 3, minimum},
+                                 {"maximum", 3, maximum},
                                  {"quotient", 3, quotient},
                                  {"equal", 3, equal},
                                  {"not_equal", 3, not_equal},
@@ -862,7 +876,9 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"ifft2", 4, ifft2},
                                  {"allclose", 6, allclose},
                                  {"isclose", 6, isclose},
-                                 {"deallocate", 1, deallocate}};
+                                 {"deallocate", 1, deallocate},
+                                 {"max", 4, max},
+                                 {"min", 4, min}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)

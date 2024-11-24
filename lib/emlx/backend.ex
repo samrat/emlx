@@ -639,7 +639,7 @@ defmodule EMLX.Backend do
     do: tensor
 
   ops =
-    [:min, :max, :divide, :quotient, :remainder, :atan2] ++
+    [:divide, :quotient, :remainder, :atan2] ++
       [:right_shift, :logical_and, :logical_or, :logical_xor] ++
       [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
       [:bitwise_and, :bitwise_or, :bitwise_xor]
@@ -654,6 +654,26 @@ defmodule EMLX.Backend do
       |> EMLX.to_type(to_mlx_type(out.type))
       |> to_nx(out)
     end
+  end
+
+  @impl true
+  def min(out, l, r) do
+    {left, right} = maybe_upcast(l, r)
+      {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+
+      EMLX.minimum(left_tx, right_tx)
+      |> EMLX.to_type(to_mlx_type(out.type))
+      |> to_nx(out)
+  end
+
+  @impl true
+  def max(out, l, r) do
+    {left, right} = maybe_upcast(l, r)
+      {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+
+      EMLX.maximum(left_tx, right_tx)
+      |> EMLX.to_type(to_mlx_type(out.type))
+      |> to_nx(out)
   end
 
   defp maybe_upcast(%T{type: t} = left, %T{type: t} = right),
@@ -720,6 +740,28 @@ defmodule EMLX.Backend do
   @impl true
   def as_type(%T{type: type} = out, %T{} = t),
     do: from_nx(t) |> EMLX.to_type(to_mlx_type(type)) |> bitmask(type) |> to_nx(out)
+
+  @impl true
+  def reduce_max(out, tensor, opts) do
+    axes = opts[:axes] || Nx.axes(tensor)
+    keep_axes = opts[:keep_axes]
+
+    tensor
+    |> from_nx()
+    |> EMLX.max(axes, keep_axes)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def reduce_min(out, tensor, opts) do
+    axes = opts[:axes] || Nx.axes(tensor)
+    keep_axes = opts[:keep_axes]
+
+    tensor
+    |> from_nx()
+    |> EMLX.min(axes, keep_axes)
+    |> to_nx(out)
+  end
 
   # Helper function to handle different scalar types
   defp constant_serialize_scalar(scalar) when is_number(scalar), do: scalar

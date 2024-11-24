@@ -327,11 +327,11 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def min(_a, _b, _device) do
+  def minimum(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def max(_a, _b, _device) do
+  def maximum(_a, _b, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -404,6 +404,14 @@ defmodule EMLX.NIF do
   end
 
   def view(_tensor, _type, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def max(_tensor, _axes, _keep_axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def min(_tensor, _axes, _keep_axes, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
