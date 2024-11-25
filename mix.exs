@@ -55,10 +55,12 @@ defmodule EMLX.MixProject do
 
   defp libmlx_config() do
     version = System.get_env("LIBMLX_VERSION", @mlx_version)
+
     features = %{
       jit?: to_boolean(System.get_env("LIBMLX_ENABLE_JIT")),
       debug?: to_boolean(System.get_env("LIBMLX_ENABLE_DEBUG"))
     }
+
     variant = to_variant(features)
 
     %{
@@ -79,10 +81,10 @@ defmodule EMLX.MixProject do
   end
 
   defp to_variant(features) do
-    [(if features.debug?, do: "debug", else: nil), (if features.jit?, do: "jit", else: nil)]
-    |> Enum.filter(& &1 != nil)
+    [if(features.debug?, do: "debug", else: nil), if(features.jit?, do: "jit", else: nil)]
+    |> Enum.filter(&(&1 != nil))
     |> Enum.sort()
-    |> Enum.map(& "-#{&1}")
+    |> Enum.map(&"-#{&1}")
     |> Enum.join("")
   end
 
@@ -110,7 +112,26 @@ defmodule EMLX.MixProject do
 
   defp download_and_unarchive(cache_dir, libmlx_config) do
     File.mkdir_p!(cache_dir)
-    libmlx_archive = Path.join(cache_dir, "libmlx-#{libmlx_config.version}#{libmlx_config.variant}.tar.gz")
+
+    libmlx_archive =
+      Path.join(cache_dir, "libmlx-#{libmlx_config.version}#{libmlx_config.variant}.tar.gz")
+
+    libmlx_archive = System.get_env("MLX_ARCHIVE_PATH", libmlx_archive)
+
+    url =
+      "https://github.com/cocoa-xu/mlx-build/releases/download/v#{libmlx_config.version}/mlx-arm64-apple-darwin#{libmlx_config.variant}.tar.gz"
+
+    sha256_url = "#{url}.sha256"
+
+    verify_integraity = "sha256=url:#{sha256_url}"
+
+    {url, verify_integraity} =
+      if customized_url = System.get_env("MLX_ARCHIVE_URL") do
+        verify_integraity = System.get_env("MLX_ARCHIVE_INTEGRAITY")
+        {customized_url, verify_integraity}
+      else
+        {url, verify_integraity}
+      end
 
     unless File.exists?(libmlx_archive) do
       # Download libmlx
@@ -119,29 +140,8 @@ defmodule EMLX.MixProject do
         Mix.raise("No MLX support on non Apple Silicon machines")
       end
 
-      url =
-        "https://github.com/cocoa-xu/mlx-build/releases/download/v#{libmlx_config.version}/mlx-arm64-apple-darwin#{libmlx_config.variant}.tar.gz"
-
-      sha256_url = "#{url}.sha256"
-
       download!(url, libmlx_archive)
-
-      libmlx_archive_checksum = checksum!(libmlx_archive)
-
-      data = download!(sha256_url)
-      checksum = String.split(data, " ", parts: 2, trim: true)
-
-      if length(checksum) != 2 do
-        Mix.raise("Invalid checksum file: #{sha256_url}")
-      end
-
-      expected_checksum = hd(checksum)
-
-      if expected_checksum != libmlx_archive_checksum do
-        Mix.raise(
-          "Checksum mismatch for #{libmlx_archive}. Expected: #{expected_checksum}, got: #{libmlx_archive_checksum}"
-        )
-      end
+      :ok = maybe_verify_integraity!(verify_integraity, libmlx_archive)
     end
 
     # Unpack libmlx and move to the target cache dir
@@ -155,6 +155,67 @@ defmodule EMLX.MixProject do
     File.rename!(parent_libmlx_dir, libmlx_config.dir)
 
     :ok
+  end
+
+  defp maybe_verify_integraity!(nil, _libmlx_archive), do: :ok
+
+  defp maybe_verify_integraity!(verify_integraity, libmlx_archive) do
+    {checksum_algo, expected_checksum} = get_checksum_info!(verify_integraity)
+    libmlx_archive_checksum = checksum!(libmlx_archive, checksum_algo)
+
+    if expected_checksum != libmlx_archive_checksum do
+      Mix.raise(
+        "Checksum (#{checksum_algo}) mismatch for #{libmlx_archive}. Expected: #{expected_checksum}, got: #{libmlx_archive_checksum}"
+      )
+    else
+      :ok
+    end
+  end
+
+  @known_checksum_algos [
+    "sha",
+    "sha224",
+    "sha256",
+    "sha384",
+    "sha512",
+    "sha3_224",
+    "sha3_256",
+    "sha3_384",
+    "sha3_512",
+    "blake2b",
+    "blake2s",
+    "ripemd160",
+    "md4",
+    "md5"
+  ]
+
+  defp get_checksum_info!(verify_integraity) do
+    case String.split(verify_integraity, "=", parts: 2, trim: true) do
+      [algo, checksum] when algo in @known_checksum_algos ->
+        {String.to_existing_atom(algo), get_checksum_value!(checksum)}
+
+      _ ->
+        Mix.raise("Invalid checksum: #{verify_integraity}")
+    end
+  end
+
+  defp get_checksum_value!("url:" <> url) do
+    checksum_from_url!(url)
+  end
+
+  defp get_checksum_value!(checksum) do
+    checksum
+  end
+
+  defp checksum_from_url!(url) do
+    data = download!(url)
+    checksum = String.split(data, " ", parts: 2, trim: true)
+
+    if length(checksum) == 0 do
+      Mix.raise("Invalid checksum file: #{url}")
+    end
+
+    hd(checksum)
   end
 
   def download!(url, save_as \\ nil) do
@@ -245,10 +306,10 @@ defmodule EMLX.MixProject do
     """)
   end
 
-  defp checksum!(file_path) do
+  defp checksum!(file_path, algo) do
     case File.read(file_path) do
       {:ok, content} ->
-        Base.encode16(:crypto.hash(:sha256, content), case: :lower)
+        Base.encode16(:crypto.hash(algo, content), case: :lower)
 
       {:error, reason} ->
         Mix.raise(
