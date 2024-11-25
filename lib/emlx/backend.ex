@@ -838,15 +838,28 @@ defmodule EMLX.Backend do
     axis = opts[:axis]
     asc? = opts[:direction] == :asc
 
-    t = tensor |> from_nx() |> EMLX.argsort(axis)
-
     if asc? do
-      to_nx(t, out)
-    else
-      t
+      tensor
+      |> from_nx()
+      |> EMLX.argsort(axis)
+      |> EMLX.astype(to_mlx_type(out.type))
       |> to_nx(out)
-      |> Nx.reverse(axes: [axis])
+    else
+      tensor
+      |> from_nx()
+      |> EMLX.negate()
+      |> EMLX.argsort(axis)
+      |> EMLX.astype(to_mlx_type(out.type))
+      |> to_nx(out)
     end
+
+    # if asc? do
+    #   to_nx(t, out)
+    # else
+    #   t
+    #   |> to_nx(out)
+    #   |> Nx.reverse(axes: [axis])
+    # end
   end
 
   defp maybe_upcast(%T{type: t} = left, %T{type: t} = right),
