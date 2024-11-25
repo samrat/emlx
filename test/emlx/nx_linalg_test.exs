@@ -1,5 +1,5 @@
 defmodule EMLX.Nx.LinalgTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   setup do
     Nx.default_backend(EMLX.Backend)
