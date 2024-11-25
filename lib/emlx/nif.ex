@@ -119,6 +119,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def reverse(_tensor, _axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def scalar_tensor(_value, _type, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

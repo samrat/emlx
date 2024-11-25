@@ -775,4 +775,29 @@ defmodule EMLX.Backend do
 
   defp device_option(nil), do: :cpu
   defp device_option(backend_opts), do: backend_opts[:device] || :cpu
+
+  @impl true
+  def reverse(out, tensor, axes) do
+    shape = Tuple.to_list(tensor.shape)
+
+    # For each dimension, set appropriate start/stop/stride values
+    {starts, stops, strides} =
+      shape
+      |> Enum.with_index()
+      |> Enum.map(fn {dim, idx} ->
+        if idx in axes do
+          # For reversed axes: start from end, stop at -1, stride backwards
+          {dim - 1, -1, -1}
+        else
+          # For normal axes: start at 0, go to dim, stride forward
+          {0, dim, 1}
+        end
+      end)
+      |> Enum.unzip3()
+
+    tensor
+    |> from_nx()
+    |> EMLX.slice(starts, stops, strides)
+    |> to_nx(out)
+  end
 end
