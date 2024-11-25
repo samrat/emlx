@@ -123,6 +123,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def pad(_tensor, _axes, _low_pad, _high_pad, _constant, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def scalar_tensor(_value, _type, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

@@ -130,6 +130,52 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def reverse(out, tensor, axes) do
+    shape = Tuple.to_list(tensor.shape)
+
+    {starts_stops, strides} =
+      shape
+      |> Enum.with_index()
+      |> Enum.map(fn {dim, idx} ->
+        if idx in axes do
+          # For reversed axes: start from end, stop at -1, stride backwards
+          {{dim - 1, -dim - 1}, -1}
+        else
+          # For normal axes: start at 0, go to dim, stride forward
+          {{0, dim}, 1}
+        end
+      end)
+      |> Enum.unzip()
+
+    {starts, stops} = Enum.unzip(starts_stops)
+
+    tensor
+    |> from_nx()
+    |> EMLX.slice(starts, stops, strides)
+    |> to_nx(out)
+  end
+
+  @impl true
+  def pad(out, tensor, pad_value, input_config) do
+    {axes, low_pad_size, high_pad_size} =
+      input_config
+      |> Enum.with_index()
+      |> Enum.reduce({[], [], []}, fn {{low, high, _}, i}, {axes, lows, highs} ->
+        {[i | axes], [max(low, 0) | lows], [max(high, 0) | highs]}
+      end)
+
+    pad_value =
+      pad_value
+      |> from_nx()
+      |> elem(1)
+
+    tensor
+    |> from_nx()
+    |> EMLX.pad(axes, low_pad_size, high_pad_size, pad_value)
+    |> to_nx(out)
+  end
+
+  @impl true
   def bitcast(out, tensor) do
     tensor
     |> from_nx()
@@ -775,29 +821,4 @@ defmodule EMLX.Backend do
 
   defp device_option(nil), do: :cpu
   defp device_option(backend_opts), do: backend_opts[:device] || :cpu
-
-  @impl true
-  def reverse(out, tensor, axes) do
-    shape = Tuple.to_list(tensor.shape)
-
-    # For each dimension, set appropriate start/stop/stride values
-    {starts, stops, strides} =
-      shape
-      |> Enum.with_index()
-      |> Enum.map(fn {dim, idx} ->
-        if idx in axes do
-          # For reversed axes: start from end, stop at -1, stride backwards
-          {dim - 1, -1, -1}
-        else
-          # For normal axes: start at 0, go to dim, stride forward
-          {0, dim, 1}
-        end
-      end)
-      |> Enum.unzip3()
-
-    tensor
-    |> from_nx()
-    |> EMLX.slice(starts, stops, strides)
-    |> to_nx(out)
-  end
 end
