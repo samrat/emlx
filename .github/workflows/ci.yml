@@ -1,0 +1,74 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  macos:
+    name: macOS (${{ matrix.elixir }}, ${{ matrix.otp }})
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        elixir: ["1.15.4", "1.16.2"]
+        otp: ["25.3.0"]
+        include:
+          - elixir: "1.16.2"
+            lint: true
+    env:
+      MIX_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Elixir and Erlang
+        id: setup
+        run: |
+          curl -fsSO https://elixir-lang.org/install.sh
+          sh install.sh elixir@${{ matrix.elixir }} otp@${{ matrix.otp }}
+
+          OTP_VERSION="${{ matrix.otp }}"
+          OTP_MAJOR="${OTP_VERSION%%.*}"
+          export OTP_PATH=$HOME/.elixir-install/installs/otp/${OTP_VERSION}/bin
+          export ELIXIR_PATH=$HOME/.elixir-install/installs/elixir/${{ matrix.elixir }}-otp-${OTP_MAJOR}/bin
+
+          echo "path=${OTP_PATH}:${ELIXIR_PATH}" >> $GITHUB_OUTPUT
+
+      - name: Retrieve dependencies cache
+        env:
+          cache-name: cache-mix-deps
+        uses: actions/cache@v4
+        id: mix-cache # id to use in retrieve action
+        with:
+          path: ${{ github.workspace }}/deps
+          key: ${{ runner.os }}-Elixir-v${{ matrix.elixir }}-OTP-${{ matrix.otp }}-${{ hashFiles(format('{0}/mix.lock', github.workspace)) }}-v1
+
+      - name: Install dependencies
+        if: ${{ steps.mix-cache.outputs.cache-hit != 'true' }}
+        run: |
+          export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          mix deps.get
+
+      - name: Compile and check warnings
+        run: |
+          export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          mix compile --warnings-as-errors
+
+      - name: Check formatting
+        if: ${{ matrix.lint }}
+        run: |
+          export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          mix format --check-formatted
+
+      - name: Run epmd for distributed tests
+        run: |
+          export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          epmd -daemon
+
+      - name: Run tests
+        run: |
+          export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          mix test
