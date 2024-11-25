@@ -437,7 +437,9 @@ NIF(pad) {
   TENSOR_PARAM(4, pad_value);
   DEVICE_PARAM(5, device);
 
-  TENSOR(mlx::core::pad(*t, axes, low_pad_size, high_pad_size, *pad_value, "constant", device));
+  TENSOR(mlx::core::pad(*t, axes, low_pad_size, high_pad_size, *pad_value, "constant", device))
+};
+
 NIF(sort) {
   TENSOR_PARAM(0, t);
   PARAM(1, int, axis);
