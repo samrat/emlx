@@ -137,15 +137,19 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
-  defp maybe_add_signature(result, %T{data: %Backend{ref: {device, ref}}}) do
-    ~c"#Ref<" ++ rest = :erlang.ref_to_list(ref)
+  if Application.compile_env(:emlx, :add_backend_on_inspect, true) do
+    defp maybe_add_signature(result, %T{data: %Backend{ref: {device, ref}}}) do
+      ~c"#Ref<" ++ rest = :erlang.ref_to_list(ref)
 
-    Inspect.Algebra.concat([
-      "EMLX.Backend<#{device}, ",
-      List.to_string(rest),
-      Inspect.Algebra.line(),
-      result
-    ])
+      Inspect.Algebra.concat([
+        "EMLX.Backend<#{device}, ",
+        List.to_string(rest),
+        Inspect.Algebra.line(),
+        result
+      ])
+    end
+  else
+    defp maybe_add_signature(result, _), do: result
   end
 
   # Helper functions
@@ -1066,10 +1070,10 @@ defmodule EMLX.Backend do
         count_leading_zeros: 2,
         triangular_solve: 4
       ] do
-    args = List.duplicate(:_, arity)
+    args = List.duplicate(Macro.var(:_, __MODULE__), arity)
     @impl true
     def unquote(op)(unquote_splicing(args)) do
-      raise "unquote(op) not supported in EMLX"
+      raise "#{unquote(op)} not supported in EMLX"
     end
   end
 
