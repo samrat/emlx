@@ -163,7 +163,17 @@ defmodule EMLX do
   deftensor transpose(tensor, axes)
   deftensor sort(tensor, axis)
   deftensor argsort(tensor, axis)
-  deftensor conv_general(tensor_input, tensor_kernel, strides, padding_low, padding_high, kernel_dilation, input_dilation, feature_group_count)
+
+  deftensor conv_general(
+              tensor_input,
+              tensor_kernel,
+              strides,
+              padding_low,
+              padding_high,
+              kernel_dilation,
+              input_dilation,
+              feature_group_count
+            )
 
   ## Unary ops
   deftensor abs(tensor)
@@ -205,7 +215,6 @@ defmodule EMLX do
   deftensor all(tensor, axes, keep_axes)
   deftensor any(tensor, axes, keep_axes)
   deftensor sum(tensor, axes, keep_axes)
-  deftensor mean(tensor, axes, keep_axes)
   deftensor product(tensor, axes, keep_axes)
   deftensor argmax(tensor, keep_axes)
   deftensor argmax(tensor, axes, keep_axes)
@@ -336,6 +345,9 @@ defmodule EMLX do
 
   @impl Nx.Defn.Compiler
   defdelegate __partitions_options__(opts), to: Nx.Defn.Evaluator
+
+  @impl Nx.Defn.Compiler
+  defdelegate __stream__(key, input, acc, vars, fun, args, opts), to: Nx.Defn.Evaluator
 
   @impl Nx.Defn.Compiler
   def __to_backend__(opts) do

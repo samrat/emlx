@@ -294,7 +294,7 @@ defmodule EMLX.Backend do
   end
 
   # Aggregation (axes)
-  ops = [:all, :any, :sum, :product, :mean]
+  ops = [:all, :any, :sum, :product]
 
   for op <- ops do
     @impl true
@@ -609,6 +609,11 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def cbrt(_out, tensor) do
+    Nx.pow(tensor, 1 / 3)
+  end
+
+  @impl true
   def erfc(out, tensor) do
     t = from_nx(tensor)
 
@@ -904,9 +909,7 @@ defmodule EMLX.Backend do
     @impl true
     def unquote(:"window_#{op}")(out, tensor, window_shape, opts) do
       # TODO: add strides and dilations
-
       tensor_rank = tuple_size(tensor.shape)
-      window_rank = tuple_size(window_shape)
 
       axes =
         0..(tuple_size(window_shape) - 1)
@@ -937,6 +940,44 @@ defmodule EMLX.Backend do
     out_shape = List.to_tuple(shape_trimmed ++ window_shape_list)
 
     EMLX.as_strided(t, out_shape, strides, 0)
+  end
+
+  @impl true
+  def to_batched(out, tensor, opts) do
+    leftover = opts[:leftover]
+
+    batch_size = elem(out.shape, 0)
+    axis_size = elem(tensor.shape, 0)
+
+    remainder = rem(axis_size, batch_size)
+    num_full_batches = div(axis_size, batch_size)
+
+    range =
+      if remainder != 0 and leftover == :repeat do
+        0..num_full_batches
+      else
+        0..(num_full_batches - 1)
+      end
+
+    Stream.map(range, fn
+      ^num_full_batches ->
+        Nx.concatenate([
+          Nx.slice_along_axis(tensor, num_full_batches * batch_size, remainder),
+          Nx.slice_along_axis(tensor, 0, batch_size - remainder)
+        ])
+
+      i ->
+        start_idx = i * batch_size
+        Nx.slice_along_axis(tensor, start_idx, batch_size)
+    end)
+  end
+
+  for {op, arity} <- [reduce: 5, window_reduce: 6, population_count: 2, count_leading_zeros: 2] do
+    args = List.duplicate(:_, arity)
+    @impl true
+    def unquote(op)(unquote_splicing(args)) do
+      raise "unquote(op) not supported in EMLX"
+    end
   end
 
   # Helper function to handle different scalar types

@@ -63,10 +63,6 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def mean(_array, _axes, _keep_dims, _device) do
-    :erlang.nif_error(:nif_not_loaded)
-  end
-
   def product(_array, _axes, _keep_dims, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

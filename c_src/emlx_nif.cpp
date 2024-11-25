@@ -530,7 +530,6 @@ NIF(take) {
 REDUCTION_AXES_OP(all)
 REDUCTION_AXES_OP(any)
 REDUCTION_AXES_OP(sum)
-REDUCTION_AXES_OP(mean)
 REDUCTION_AXES_OP2(product, prod)
 REDUCTION_AXIS_OP(argmax)
 REDUCTION_AXIS_OP(argmin)
@@ -859,7 +858,6 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"all", 4, all},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
-                                 {"mean", 4, mean},
                                  {"product", 4, product},
                                  {"argmax", 3, argmax},
                                  {"argmax", 4, argmax},
