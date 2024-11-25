@@ -154,6 +154,9 @@ defmodule EMLX.NIF do
   end
 
   def pad(_tensor, _axes, _low_pad, _high_pad, _constant, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def sort(_tensor, _axis, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
