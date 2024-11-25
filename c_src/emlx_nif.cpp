@@ -390,6 +390,21 @@ NIF(tensordot) {
   TENSOR(mlx::core::tensordot(*a, *b, axes1, axes2, device));
 }
 
+NIF(einsum) {
+  TENSOR_PARAM(0, a);
+  TENSOR_PARAM(1, b);
+
+  std::string spec_string;
+  if (!nx::nif::get(env, argv[2], spec_string)) {
+    return nx::nif::error(env, "Unable to get spec_string param.");
+  }
+
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::einsum(spec_string, std::vector<mlx::core::array>({*a, *b}),
+                           device));
+}
+
 NIF(conv_general) {
   TENSOR_PARAM(0, tensor_input);
   TENSOR_PARAM(1, tensor_kernel);
@@ -880,6 +895,7 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"eye", 4, eye},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},
+                                 {"einsum", 4, einsum},
                                  {"conv_general", 9, conv_general},
                                  {"transpose", 3, transpose},
                                  {"sort", 3, sort},

@@ -526,6 +526,67 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
+  defp dot_spec_to_einsum_spec(
+         left_shape,
+         right_shape,
+         left_contract_axes,
+         left_batch_axes,
+         right_contract_axes,
+         right_batch_axes
+       ) do
+    possible_labels = Enum.map(?a..?z, &<<&1>>)
+    {left_labels, possible_labels} = Enum.split(possible_labels, tuple_size(left_shape))
+    {right_labels, possible_labels} = Enum.split(possible_labels, tuple_size(right_shape))
+
+    if possible_labels == [] and length(right_labels) < tuple_size(right_shape) do
+      raise "Not enough labels to generate einsum specification"
+    end
+
+    # Assign the same label to batch axes and to contraction axes
+    right_labels =
+      Enum.zip_reduce(
+        left_batch_axes ++ left_contract_axes,
+        right_batch_axes ++ right_contract_axes,
+        right_labels,
+        fn l, r, right_labels ->
+          List.replace_at(right_labels, r, Enum.fetch!(left_labels, l))
+        end
+      )
+
+    # Collect output labels based on batch and non-contracting, non-batching axes
+
+    # Add batch axes
+    output_labels = Enum.map(left_batch_axes, fn l -> Enum.fetch!(left_labels, l) end)
+
+    # Add non-contracting, non-batching axes from left
+
+    left_contract_and_batch = left_batch_axes ++ left_contract_axes
+
+    output_labels =
+      Enum.reduce(0..(tuple_size(left_shape) - 1), output_labels, fn axis, output_labels ->
+        if axis not in left_contract_and_batch do
+          [output_labels, Enum.fetch!(left_labels, axis)]
+        else
+          output_labels
+        end
+      end)
+
+    # Add non-contracting, non-batching axes from right
+
+    right_contract_and_batch = right_batch_axes ++ right_contract_axes
+
+    output_labels =
+      Enum.reduce(0..(tuple_size(right_shape) - 1), output_labels, fn axis, output_labels ->
+        if axis not in right_contract_and_batch do
+          [output_labels, Enum.fetch!(right_labels, axis)]
+        else
+          output_labels
+        end
+      end)
+
+    IO.iodata_to_binary([left_labels, ",", right_labels, "->", output_labels])
+  end
+
   @impl true
   def dot(
         %T{type: out_type} = out,
@@ -540,23 +601,36 @@ defmodule EMLX.Backend do
     left_tx = from_nx(left)
     right_tx = from_nx(right)
 
-    # TODO: MLX doesn't support batched axes, so we can do an outer loop in Elixir instead
-
-    if left_batched_axes != [] or right_batched_axes != [] do
-      raise "MLX doesn't support batched axes in tensordot"
-    end
-
     if not Nx.Type.float?(out_type) do
       raise "MLX only supports floating point output types in tensordot"
     end
 
-    EMLX.tensordot(
-      to_typed_ref(left_tx, left_type, out_type),
-      to_typed_ref(right_tx, right_type, out_type),
-      left_axes,
-      right_axes
-    )
-    |> to_nx(out)
+    if left_batched_axes != [] or right_batched_axes != [] do
+      einsum_spec =
+        dot_spec_to_einsum_spec(
+          left.shape,
+          right.shape,
+          left_axes,
+          left_batched_axes,
+          right_axes,
+          right_batched_axes
+        )
+
+      to_typed_ref(left_tx, left_type, out_type)
+      |> EMLX.einsum(
+        to_typed_ref(right_tx, right_type, out_type),
+        einsum_spec
+      )
+      |> to_nx(out)
+    else
+      EMLX.tensordot(
+        to_typed_ref(left_tx, left_type, out_type),
+        to_typed_ref(right_tx, right_type, out_type),
+        left_axes,
+        right_axes
+      )
+      |> to_nx(out)
+    end
   end
 
   # Unary Ops

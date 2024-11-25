@@ -439,9 +439,8 @@ defmodule EMLX.NxTest do
     end
 
     # batched axes are not supported yet
-    @tag :skip
     test "dot with multiple batch axes" do
-      u = Nx.tensor([[[1, 1]], [[2, 2]]])
+      u = Nx.tensor([[[1, 1.0]], [[2, 2]]])
       v = Nx.tensor([[[1, 2]], [[1, 2]]])
 
       assert_equal(Nx.tensor([[3], [6]]), Nx.dot(u, [2], [0, 1], v, [2], [0, 1]))

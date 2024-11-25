@@ -160,6 +160,7 @@ defmodule EMLX do
   deftensor isclose(tensorA, tensorB, rtol, atol, equal_nan)
 
   deftensor tensordot(tensorA, tensorB, axesA, axesB)
+  deftensor einsum(tensorA, tensorB, spec_string)
   deftensor transpose(tensor, axes)
   deftensor sort(tensor, axis)
   deftensor argsort(tensor, axis)
