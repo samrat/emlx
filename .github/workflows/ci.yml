@@ -1,0 +1,42 @@
+name: Test macOS
+on:
+  push:
+    branches:
+      - main
+      - setup-ci
+  pull_request:
+
+jobs:
+  macos:
+    name: macOS (Elixir ${{ matrix.elixir }}, OTP ${{ matrix.otp }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        elixir: ["1.16.2"]
+        otp: ["25.3"]
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+      - name: Retrieve dependencies cache
+        env:
+          cache-name: cache-mix-deps
+        uses: actions/cache@v3
+        id: mix-cache
+        with:
+          path: deps
+          key: ${{ runner.os }}-Elixir-v${{ matrix.elixir }}-OTP-${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-v1
+      - name: Install dependencies
+        if: ${{ steps.mix-cache.outputs.cache-hit != 'true' }}
+        run: mix deps.get
+      - name: Compile and check warnings
+        run: mix compile --warnings-as-errors
+      - name: Run epmd for distributed tests
+        run: epmd -daemon
+      - name: Run tests
+        run: mix test 
