@@ -458,6 +458,74 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
+  defp move_channels_last(list) do
+    [batch, channels | spatial] = list
+    List.flatten([batch, spatial, channels])
+  end
+
+  @impl true
+  def conv(out, input, kernel, opts) do
+    input_permutation = opts[:input_permutation]
+    kernel_permutation = opts[:kernel_permutation]
+    output_permutation = opts[:output_permutation]
+    strides = opts[:strides]
+    padding = opts[:padding]
+    input_dilation = opts[:input_dilation]
+    kernel_dilation = opts[:kernel_dilation]
+    feature_group_count = opts[:feature_group_size]
+    batch_group_size = opts[:batch_group_size]
+
+    if batch_group_size != 1 do
+      raise "MLX doesn't support batch group size"
+    end
+
+    permute_channels_last =
+      Enum.to_list(0..(tuple_size(input.shape) - 1)) |> move_channels_last()
+
+    input_mx =
+      from_nx(input)
+      |> EMLX.transpose(input_permutation)
+      |> EMLX.transpose(permute_channels_last)
+
+    permute_channels_last =
+      Enum.to_list(0..(tuple_size(kernel.shape) - 1)) |> move_channels_last()
+
+    kernel_mx =
+      from_nx(kernel)
+      |> EMLX.transpose(kernel_permutation)
+      |> EMLX.transpose(permute_channels_last)
+
+    {padding_low, padding_high} = Enum.unzip(padding)
+
+    [batch | spatial_and_channels] = Enum.to_list(0..(tuple_size(out.shape) - 1))
+
+    {channels, spatial} = List.pop_at(spatial_and_channels, -1)
+
+    permute_channels_first = [batch, channels | spatial]
+
+    # The permutation that Nx.Shape expects is actually the reverse permutation
+    # for the given config
+    output_permutation =
+      output_permutation
+      |> Enum.with_index()
+      |> Enum.sort()
+      |> Enum.map(&elem(&1, 1))
+
+    input_mx
+    |> EMLX.conv_general(
+      kernel_mx,
+      strides,
+      padding_low,
+      padding_high,
+      kernel_dilation,
+      input_dilation,
+      feature_group_count
+    )
+    |> EMLX.transpose(permute_channels_first)
+    |> EMLX.transpose(output_permutation)
+    |> to_nx(out)
+  end
+
   @impl true
   def dot(
         %T{type: out_type} = out,

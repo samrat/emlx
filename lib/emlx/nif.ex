@@ -135,6 +135,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def conv_general(_tensor_input, _tensor_kernel, _strides, _padding_low, _padding_high, _kernel_dilation, _input_dilation, _feature_group_count, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def transpose(_tensor, _axes, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

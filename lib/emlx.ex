@@ -163,6 +163,7 @@ defmodule EMLX do
   deftensor transpose(tensor, axes)
   deftensor sort(tensor, axis)
   deftensor argsort(tensor, axis)
+  deftensor conv_general(tensor_input, tensor_kernel, strides, padding_low, padding_high, kernel_dilation, input_dilation, feature_group_count)
 
   ## Unary ops
   deftensor abs(tensor)

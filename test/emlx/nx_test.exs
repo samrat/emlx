@@ -860,9 +860,9 @@ defmodule EMLX.NxTest do
 
   describe "conv" do
     test "test input_permutation" do
-      left = Nx.iota({9})
+      left = Nx.iota({9}, type: :f32)
       left = Nx.reshape(left, {1, 1, 3, 3})
-      right = Nx.iota({8})
+      right = Nx.iota({8}, type: :f32)
       right = Nx.reshape(right, {4, 1, 2, 1})
 
       result =
@@ -938,7 +938,7 @@ defmodule EMLX.NxTest do
 
     test "output_permutation" do
       result =
-        Nx.conv(Nx.iota({1, 3, 3, 6}), Nx.broadcast(1, {2, 6, 1, 1}),
+        Nx.conv(Nx.iota({1, 3, 3, 6}, type: :f32), Nx.broadcast(1.0, {2, 6, 1, 1}),
           input_permutation: [0, 3, 1, 2],
           output_permutation: [0, 3, 1, 2]
         )
@@ -968,7 +968,7 @@ defmodule EMLX.NxTest do
     end
 
     test "input_dilation" do
-      t = Nx.iota({1, 1, 1, 2, 3})
+      t = Nx.iota({1, 1, 1, 2, 3}, type: :f32)
       k = Nx.tensor([[[[[1, -1], [-1, 1]]]]])
 
       result = Nx.conv(t, k, input_dilation: [1, 2, 3])

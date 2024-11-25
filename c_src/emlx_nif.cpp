@@ -390,6 +390,22 @@ NIF(tensordot) {
   TENSOR(mlx::core::tensordot(*a, *b, axes1, axes2, device));
 }
 
+NIF(conv_general) {
+  TENSOR_PARAM(0, tensor_input);
+  TENSOR_PARAM(1, tensor_kernel);
+  LIST_PARAM(2, std::vector<int>, strides);
+  LIST_PARAM(3, std::vector<int>, padding_low);
+  LIST_PARAM(4, std::vector<int>, padding_high);
+  LIST_PARAM(5, std::vector<int>, kernel_dilation);
+  LIST_PARAM(6, std::vector<int>, input_dilation);
+  PARAM(7, int, feature_group_count);
+  DEVICE_PARAM(8, device);
+
+  TENSOR(mlx::core::conv_general(
+      *tensor_input, *tensor_kernel, strides, padding_low, padding_high,
+      kernel_dilation, input_dilation, feature_group_count, false, device));
+}
+
 NIF(transpose) {
   TENSOR_PARAM(0, t);
   LIST_PARAM(1, std::vector<int>, axes);
@@ -866,6 +882,7 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"eye", 4, eye},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},
+                                 {"conv_general", 9, conv_general},
                                  {"transpose", 3, transpose},
                                  {"sort", 3, sort},
                                  {"argsort", 3, argsort},
