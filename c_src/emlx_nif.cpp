@@ -230,7 +230,7 @@ NIF(reshape) {
   TENSOR(mlx::core::reshape(*t, shape, device));
 }
 
-NIF(to_type) {
+NIF(astype) {
   TENSOR_PARAM(0, t);
   TYPE_PARAM(1, type);
   DEVICE_PARAM(2, device);
@@ -390,6 +390,37 @@ NIF(tensordot) {
   TENSOR(mlx::core::tensordot(*a, *b, axes1, axes2, device));
 }
 
+NIF(einsum) {
+  TENSOR_PARAM(0, a);
+  TENSOR_PARAM(1, b);
+
+  std::string spec_string;
+  if (!nx::nif::get(env, argv[2], spec_string)) {
+    return nx::nif::error(env, "Unable to get spec_string param.");
+  }
+
+  DEVICE_PARAM(3, device);
+
+  TENSOR(mlx::core::einsum(spec_string, std::vector<mlx::core::array>({*a, *b}),
+                           device));
+}
+
+NIF(conv_general) {
+  TENSOR_PARAM(0, tensor_input);
+  TENSOR_PARAM(1, tensor_kernel);
+  LIST_PARAM(2, std::vector<int>, strides);
+  LIST_PARAM(3, std::vector<int>, padding_low);
+  LIST_PARAM(4, std::vector<int>, padding_high);
+  LIST_PARAM(5, std::vector<int>, kernel_dilation);
+  LIST_PARAM(6, std::vector<int>, input_dilation);
+  PARAM(7, int, feature_group_count);
+  DEVICE_PARAM(8, device);
+
+  TENSOR(mlx::core::conv_general(
+      *tensor_input, *tensor_kernel, strides, padding_low, padding_high,
+      kernel_dilation, input_dilation, feature_group_count, false, device));
+}
+
 NIF(transpose) {
   TENSOR_PARAM(0, t);
   LIST_PARAM(1, std::vector<int>, axes);
@@ -407,6 +438,20 @@ NIF(pad) {
   DEVICE_PARAM(5, device);
 
   TENSOR(mlx::core::pad(*t, axes, low_pad_size, high_pad_size, *pad_value, "constant", device));
+NIF(sort) {
+  TENSOR_PARAM(0, t);
+  PARAM(1, int, axis);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::sort(*t, axis, device));
+}
+
+NIF(argsort) {
+  TENSOR_PARAM(0, t);
+  PARAM(1, int, axis);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::argsort(*t, axis, device));
 }
 
 NIF(eval) {
@@ -482,11 +527,16 @@ NIF(take) {
 #define REDUCTION_AXIS_OP2(OP, NATIVE_OP)                                      \
   NIF(OP) {                                                                    \
     TENSOR_PARAM(0, tensor);                                                   \
-    PARAM(1, int, axis);                                                       \
-    PARAM(2, bool, keep_dims);                                                 \
-    DEVICE_PARAM(3, device);                                                   \
-                                                                               \
-    TENSOR(mlx::core::NATIVE_OP(*tensor, axis, keep_dims, device));            \
+    if (argc == 3) {                                                           \
+      PARAM(1, bool, keep_dims);                                               \
+      DEVICE_PARAM(2, device);                                                 \
+      TENSOR(mlx::core::NATIVE_OP(*tensor, keep_dims, device));                \
+    } else {                                                                   \
+      PARAM(1, int, axis);                                                     \
+      PARAM(2, bool, keep_dims);                                               \
+      DEVICE_PARAM(3, device);                                                 \
+      TENSOR(mlx::core::NATIVE_OP(*tensor, axis, keep_dims, device));          \
+    }                                                                          \
   }
 
 #define REDUCTION_AXIS_REVERSIBLE_OP(OP) REDUCTION_AXIS_REVERSIBLE_OP2(OP, OP)
@@ -789,7 +839,35 @@ NIF(min) {
   TENSOR(mlx::core::min(*t, axes, keep_axes, device));
 }
 
-static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
+NIF(clip) {
+  TENSOR_PARAM(0, t);
+  TENSOR_PARAM(1, min);
+  TENSOR_PARAM(2, max);
+  DEVICE_PARAM(3, device);
+  TENSOR(mlx::core::clip(*t, *min, *max, device));
+}
+
+NIF(strides) {
+  TENSOR_PARAM(0, t);
+
+  auto strides = t->strides();
+
+  return nx::nif::ok(env, nx::nif::make_list(env, strides));
+}
+
+NIF(as_strided) {
+  TENSOR_PARAM(0, t);
+  TUPLE_PARAM(1, std::vector<int>, shape);
+  LIST_PARAM(2, std::vector<size_t>, strides);
+  PARAM(3, int, offset);
+  DEVICE_PARAM(4, device);
+
+  TENSOR(mlx::core::as_strided(*t, shape, strides, offset, device));
+}
+
+static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
+                                 {"as_strided", 5, as_strided},
+                                 {"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},
                                  {"view", 3, view},
                                  {"stack", 3, stack},
@@ -805,7 +883,9 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"any", 4, any},
                                  {"sum", 4, sum},
                                  {"product", 4, product},
+                                 {"argmax", 3, argmax},
                                  {"argmax", 4, argmax},
+                                 {"argmin", 3, argmin},
                                  {"argmin", 4, argmin},
                                  {"cumulative_sum", 5, cumulative_sum},
                                  {"cumulative_product", 5, cumulative_product},
@@ -813,7 +893,7 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"cumulative_min", 5, cumulative_min},
                                  {"shape", 1, shape},
                                  {"reshape", 3, reshape},
-                                 {"to_type", 3, to_type},
+                                 {"astype", 3, astype},
                                  {"to_blob", 1, to_blob},
                                  {"to_blob", 2, to_blob},
                                  {"from_blob", 4, from_blob},
@@ -824,8 +904,12 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"eye", 4, eye},
                                  {"broadcast_to", 3, broadcast_to},
                                  {"tensordot", 5, tensordot},
+                                 {"einsum", 4, einsum},
+                                 {"conv_general", 9, conv_general},
                                  {"transpose", 3, transpose},
                                  {"pad", 6, pad},
+                                 {"sort", 3, sort},
+                                 {"argsort", 3, argsort},
                                  {"abs", 2, abs},
                                  {"ceil", 2, ceil},
                                  {"conjugate", 2, conjugate},
@@ -890,7 +974,8 @@ static ErlNifFunc nif_funcs[] = {{"scalar_type", 1, scalar_type},
                                  {"isclose", 6, isclose},
                                  {"deallocate", 1, deallocate},
                                  {"max", 4, max},
-                                 {"min", 4, min}};
+                                 {"min", 4, min},
+                                 {"clip", 4, clip}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)

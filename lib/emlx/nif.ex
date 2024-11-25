@@ -3,6 +3,10 @@ defmodule EMLX.NIF do
   Elixir bindings for MLX array operations.
   """
 
+  def strides(_tensor) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def item(_tensor) do
     :erlang.nif_error(:nif_not_loaded)
   end
@@ -67,7 +71,15 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def argmax(_array, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def argmin(_array, _axes, _keep_dims, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def argmin(_array, _keep_dims, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -91,7 +103,11 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def to_type(_array, _type, _device) do
+  def as_strided(_tensor, _shape, _strides, _offset, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def astype(_array, _type, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -115,11 +131,34 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def einsum(_a, _b, _spec_string, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def conv_general(
+        _tensor_input,
+        _tensor_kernel,
+        _strides,
+        _padding_low,
+        _padding_high,
+        _kernel_dilation,
+        _input_dilation,
+        _feature_group_count,
+        _device
+      ) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def transpose(_tensor, _axes, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
   def pad(_tensor, _axes, _low_pad, _high_pad, _constant, _device) do
+  def sort(_tensor, _axis, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def argsort(_tensor, _axis, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -416,6 +455,10 @@ defmodule EMLX.NIF do
   end
 
   def min(_tensor, _axes, _keep_axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def clip(_tensor, _min, _max, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
