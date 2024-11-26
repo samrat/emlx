@@ -1114,6 +1114,39 @@ defmodule EMLX.Backend do
     end)
   end
 
+  @impl true
+  def gather(out, tensor, indices, opts) do
+    axes = opts[:axes]
+
+    num_axes = Nx.axis_size(indices, -1)
+
+    slice_sizes =
+      Enum.map(Nx.axes(tensor), fn axis ->
+        if axis in axes do
+          1
+        else
+          Nx.axis_size(tensor, axis)
+        end
+      end)
+
+    indices_list =
+      Enum.map(0..(num_axes - 1), fn entry ->
+        {_device, ref} =
+          indices
+          |> Nx.slice_along_axis(entry, 1, axis: -1)
+          |> Nx.squeeze(axes: [-1])
+          |> from_nx()
+
+        ref
+      end)
+
+    tensor
+    |> from_nx()
+    |> EMLX.gather(indices_list, axes, slice_sizes)
+    |> EMLX.reshape(out.shape)
+    |> to_nx(out)
+  end
+
   for {op, arity} <- [
         reduce: 5,
         window_reduce: 6,
@@ -1135,7 +1168,6 @@ defmodule EMLX.Backend do
         to_pointer: 2,
         indexed_put: 5,
         indexed_add: 5,
-        gather: 4,
         from_pointer: 5
       ] do
     @impl true

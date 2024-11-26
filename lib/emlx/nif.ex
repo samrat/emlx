@@ -189,6 +189,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def gather(_tensor, _indices, _axes, _slice_sizes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def abs(_tensor, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

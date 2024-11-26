@@ -11,8 +11,6 @@ defmodule EMLX.Nx.DoctestTest do
     indexed_put: 4,
     # put_diagonal depends on indexed_put
     put_diagonal: 3,
-    # take_diagonal depends on gather
-    take_diagonal: 2,
     # make_diagonal depends on indexed_put
     make_diagonal: 2,
     # mode depends on indexed_add
@@ -26,9 +24,7 @@ defmodule EMLX.Nx.DoctestTest do
     window_scatter_min: 5,
     window_scatter_max: 5,
     reverse: 2,
-    take: 3,
     slice: 4,
-    gather: 3,
     reflect: 2
   ]
 

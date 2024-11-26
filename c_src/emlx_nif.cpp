@@ -437,7 +437,8 @@ NIF(pad) {
   TENSOR_PARAM(4, pad_value);
   DEVICE_PARAM(5, device);
 
-  TENSOR(mlx::core::pad(*t, axes, low_pad_size, high_pad_size, *pad_value, "constant", device))
+  TENSOR(mlx::core::pad(*t, axes, low_pad_size, high_pad_size, *pad_value,
+                        "constant", device))
 };
 
 NIF(sort) {
@@ -503,6 +504,16 @@ NIF(take) {
   DEVICE_PARAM(3, device);
 
   TENSOR(mlx::core::take(*t, *indices, axis, device));
+}
+
+NIF(gather) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<mlx::core::array>, indices);
+  LIST_PARAM(2, std::vector<int>, axes);
+  LIST_PARAM(3, std::vector<int>, slice_sizes);
+  DEVICE_PARAM(4, device);
+
+  TENSOR(mlx::core::gather(*t, indices, axes, slice_sizes, device));
 }
 
 /* Reduction Ops */
@@ -877,6 +888,7 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"concatenate", 3, concatenate},
                                  {"take_along_axis", 4, take_along_axis},
                                  {"take", 4, take},
+                                 {"gather", 5, gather},
                                  {"slice", 5, slice},
                                  {"slice_update", 5, slice_update},
                                  {"squeeze", 3, squeeze},

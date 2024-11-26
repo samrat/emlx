@@ -231,6 +231,7 @@ defmodule EMLX do
   deftensor concatenate(tensors, axis)
   deftensor take_along_axis(tensor, tensorIndices, axis)
   deftensor take(tensor, tensorIndices, axis)
+  deftensor gather(tensor, indices, axes, slice_sizes)
   deftensor max(tensor, axes, keep_axes)
   deftensor min(tensor, axes, keep_axes)
   deftensor clip(tensor, tensor_min, tensor_max)
