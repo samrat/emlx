@@ -821,7 +821,7 @@ NIF(ifft2) {
 NIF(view) {
   TENSOR_PARAM(0, t);
   TYPE_PARAM(1, type);
-  DEVICE_PARAM(3, device);
+  DEVICE_PARAM(2, device);
   TENSOR(mlx::core::view(*t, type, device));
 }
 
