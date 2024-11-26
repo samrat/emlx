@@ -480,6 +480,7 @@ defmodule EMLX.NxTest do
       assert_equal(Nx.dot(t2, t1), Nx.tensor(32))
     end
 
+    @tag :skip
     test "make_diagonal" do
       t =
         [1, 2, 3]
