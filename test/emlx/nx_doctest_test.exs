@@ -49,10 +49,6 @@ defmodule EMLX.Nx.DoctestTest do
 
   @to_be_fixed [
     :moduledoc,
-    argmin: 2,
-    argmax: 2,
-    argsort: 2,
-    sort: 2,
     real: 1,
     imag: 1,
     acosh: 1,
@@ -89,7 +85,12 @@ defmodule EMLX.Nx.DoctestTest do
     reduce: 4,
     window_reduce: 5,
     population_count: 1,
-    count_leading_zeros: 1
+    count_leading_zeros: 1,
+    # MLX sorts NaNs lowest, Nx sorts them highest
+    argmin: 2,
+    argmax: 2,
+    argsort: 2,
+    sort: 2
   ]
 
   doctest Nx, except: @not_implemented_yet ++ @rounding_error ++ @not_supported ++ @to_be_fixed

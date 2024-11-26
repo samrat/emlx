@@ -377,14 +377,19 @@ defmodule EMLX.Backend do
     @impl true
     def unquote(op)(out, tensor, opts) do
       axis = opts[:axis]
-      keep_axes = opts[:keep_axes] == true
+      keep_axis = opts[:keep_axis] == true
+
+      if opts[:tie_break] == :high do
+        raise "Nx.Backend.#{unquote(op)}/3 with tie_break: :high is not supported in EMLX"
+      end
+
       t_tx = from_nx(tensor)
 
       result =
         if axis do
-          EMLX.unquote(op)(t_tx, axis, keep_axes)
+          EMLX.unquote(op)(t_tx, axis, keep_axis)
         else
-          EMLX.unquote(op)(t_tx, keep_axes)
+          EMLX.unquote(op)(t_tx, keep_axis)
         end
 
       result
