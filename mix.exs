@@ -123,14 +123,14 @@ defmodule EMLX.MixProject do
 
     sha256_url = "#{url}.sha256"
 
-    verify_integraity = "sha256=url:#{sha256_url}"
+    verify_integrity = "sha256=url:#{sha256_url}"
 
-    {url, verify_integraity} =
+    {url, verify_integrity} =
       if customized_url = System.get_env("MLX_ARCHIVE_URL") do
-        verify_integraity = System.get_env("MLX_ARCHIVE_INTEGRAITY")
-        {customized_url, verify_integraity}
+        verify_integrity = System.get_env("MLX_ARCHIVE_INTEGRITY")
+        {customized_url, verify_integrity}
       else
-        {url, verify_integraity}
+        {url, verify_integrity}
       end
 
     unless File.exists?(libmlx_archive) do
@@ -141,7 +141,7 @@ defmodule EMLX.MixProject do
       end
 
       download!(url, libmlx_archive)
-      :ok = maybe_verify_integraity!(verify_integraity, libmlx_archive)
+      :ok = maybe_verify_integrity!(verify_integrity, libmlx_archive)
     end
 
     # Unpack libmlx and move to the target cache dir
@@ -157,10 +157,10 @@ defmodule EMLX.MixProject do
     :ok
   end
 
-  defp maybe_verify_integraity!(nil, _libmlx_archive), do: :ok
+  defp maybe_verify_integrity!(nil, _libmlx_archive), do: :ok
 
-  defp maybe_verify_integraity!(verify_integraity, libmlx_archive) do
-    {checksum_algo, expected_checksum} = get_checksum_info!(verify_integraity)
+  defp maybe_verify_integrity!(verify_integrity, libmlx_archive) do
+    {checksum_algo, expected_checksum} = get_checksum_info!(verify_integrity)
     libmlx_archive_checksum = checksum!(libmlx_archive, checksum_algo)
 
     if expected_checksum != libmlx_archive_checksum do
@@ -189,13 +189,13 @@ defmodule EMLX.MixProject do
     "md5"
   ]
 
-  defp get_checksum_info!(verify_integraity) do
-    case String.split(verify_integraity, "=", parts: 2, trim: true) do
+  defp get_checksum_info!(verify_integrity) do
+    case String.split(verify_integrity, "=", parts: 2, trim: true) do
       [algo, checksum] when algo in @known_checksum_algos ->
         {String.to_existing_atom(algo), get_checksum_value!(checksum)}
 
       _ ->
-        Mix.raise("Invalid checksum: #{verify_integraity}")
+        Mix.raise("Invalid checksum: #{verify_integrity}")
     end
   end
 
