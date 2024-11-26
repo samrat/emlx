@@ -53,8 +53,6 @@ defmodule EMLX.Nx.DoctestTest do
     argmax: 2,
     argsort: 2,
     sort: 2,
-    ifft2: 2,
-    fft2: 2,
     real: 1,
     imag: 1,
     acosh: 1,

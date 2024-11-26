@@ -791,23 +791,23 @@ defmodule EMLX.Backend do
 
   @impl true
   def fft2(out, tensor, opts) do
-    length = opts[:length]
+    lengths = opts[:lengths]
     axes = opts[:axes] || [-2, -1]
 
     tensor
     |> from_nx()
-    |> EMLX.fft2(length, axes)
+    |> EMLX.fft2(lengths, axes)
     |> to_nx(out)
   end
 
   @impl true
   def ifft2(out, tensor, opts) do
-    length = opts[:length]
+    lengths = opts[:lengths]
     axes = opts[:axes] || [-2, -1]
 
     tensor
     |> from_nx()
-    |> EMLX.ifft2(length, axes)
+    |> EMLX.ifft2(lengths, axes)
     |> to_nx(out)
   end
 
