@@ -36,6 +36,9 @@ jobs:
           export ELIXIR_PATH=$HOME/.elixir-install/installs/elixir/${{ matrix.elixir }}-otp-${OTP_MAJOR}/bin
 
           echo "path=${OTP_PATH}:${ELIXIR_PATH}" >> $GITHUB_OUTPUT
+          echo "${OTP_PATH}" >> $GITHUB_PATH
+          echo "${ELIXIR_PATH}" >> $GITHUB_PATH
+          
       - name: Setup Mix
         run: |
           mix local.hex --force
