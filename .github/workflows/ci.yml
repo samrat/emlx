@@ -36,6 +36,8 @@ jobs:
           export ELIXIR_PATH=$HOME/.elixir-install/installs/elixir/${{ matrix.elixir }}-otp-${OTP_MAJOR}/bin
 
           echo "path=${OTP_PATH}:${ELIXIR_PATH}" >> $GITHUB_OUTPUT
+          mix local.hex --force
+          mix local.rebar --force
 
       - name: Retrieve dependencies cache
         env:
