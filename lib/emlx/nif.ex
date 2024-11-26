@@ -193,6 +193,14 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def scatter_add(_tensor, _indices, _tensor_updates, _axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def scatter(_tensor, _indices, _tensor_updates, _axes, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def abs(_tensor, _device) do
     :erlang.nif_error(:nif_not_loaded)
   end

@@ -1147,6 +1147,61 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
+  @impl true
+  def indexed_add(out, target, indices, updates, opts) do
+    indexed_op(:scatter_add, out, target, indices, updates, opts)
+  end
+
+  @impl true
+  def indexed_put(out, target, indices, updates, opts) do
+    indexed_op(:scatter, out, target, indices, updates, opts)
+  end
+
+  defp indexed_op(nif_op, out, target, indices, updates, opts) do
+    axes = opts[:axes] || Nx.axes(target)
+    num_axes = Nx.axis_size(indices, -1)
+
+    indices_list =
+      Enum.map(0..(num_axes - 1), fn entry ->
+        {_device, ref} =
+          indices
+          |> Nx.slice_along_axis(entry, 1, axis: -1)
+          |> Nx.squeeze(axes: [-1])
+          |> from_nx()
+
+        ref
+      end)
+
+    insert_index =
+      axes
+      |> Enum.scan(&(&1 - &2))
+      |> Enum.find_index(&(&1 > 1))
+      |> then(&(&1 || num_axes))
+
+    [num_updates | updates_inner_shape] = Tuple.to_list(updates.shape)
+
+    updates_shape =
+      [num_updates | List.duplicate(1, num_axes)]
+      |> List.insert_at(insert_index + 1, updates_inner_shape)
+      |> List.flatten()
+      |> List.to_tuple()
+
+    updates_mx = from_nx(updates) |> EMLX.reshape(updates_shape)
+
+    target
+    |> from_nx()
+    |> EMLX.astype(to_mlx_type(out.type))
+    |> then(
+      &apply(EMLX, nif_op, [
+        &1,
+        indices_list,
+        EMLX.astype(updates_mx, to_mlx_type(out.type)),
+        axes
+      ])
+    )
+    |> to_nx(out)
+  end
+
   for {op, arity} <- [
         reduce: 5,
         window_reduce: 6,
@@ -1166,8 +1221,6 @@ defmodule EMLX.Backend do
         window_scatter_max: 6,
         window_scatter_min: 6,
         to_pointer: 2,
-        indexed_put: 5,
-        indexed_add: 5,
         from_pointer: 5
       ] do
     @impl true

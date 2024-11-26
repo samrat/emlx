@@ -7,14 +7,6 @@ defmodule EMLX.Nx.DoctestTest do
   end
 
   @not_implemented_yet [
-    indexed_add: 4,
-    indexed_put: 4,
-    # put_diagonal depends on indexed_put
-    put_diagonal: 3,
-    # make_diagonal depends on indexed_put
-    make_diagonal: 2,
-    # mode depends on indexed_add
-    mode: 2,
     pad: 3,
     conv: 3,
     # dot does not support integer types

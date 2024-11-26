@@ -516,6 +516,26 @@ NIF(gather) {
   TENSOR(mlx::core::gather(*t, indices, axes, slice_sizes, device));
 }
 
+NIF(scatter_add) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<mlx::core::array>, indices);
+  TENSOR_PARAM(2, tensor_updates);
+  LIST_PARAM(3, std::vector<int>, axes);
+  DEVICE_PARAM(4, device);
+
+  TENSOR(mlx::core::scatter_add(*t, indices, *tensor_updates, axes, device));
+}
+
+NIF(scatter) {
+  TENSOR_PARAM(0, t);
+  LIST_PARAM(1, std::vector<mlx::core::array>, indices);
+  TENSOR_PARAM(2, tensor_updates);
+  LIST_PARAM(3, std::vector<int>, axes);
+  DEVICE_PARAM(4, device);
+
+  TENSOR(mlx::core::scatter(*t, indices, *tensor_updates, axes, device));
+}
+
 /* Reduction Ops */
 
 #define REDUCTION_AXES_OP(OP) REDUCTION_AXES_OP2(OP, OP)
@@ -889,6 +909,8 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"take_along_axis", 4, take_along_axis},
                                  {"take", 4, take},
                                  {"gather", 5, gather},
+                                 {"scatter_add", 5, scatter_add},
+                                 {"scatter", 5, scatter},
                                  {"slice", 5, slice},
                                  {"slice_update", 5, slice_update},
                                  {"squeeze", 3, squeeze},

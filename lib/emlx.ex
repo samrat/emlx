@@ -232,6 +232,8 @@ defmodule EMLX do
   deftensor take_along_axis(tensor, tensorIndices, axis)
   deftensor take(tensor, tensorIndices, axis)
   deftensor gather(tensor, indices, axes, slice_sizes)
+  deftensor scatter_add(tensor, indices, tensor_updates, axes)
+  deftensor scatter(tensor, indices, tensor_updates, axes)
   deftensor max(tensor, axes, keep_axes)
   deftensor min(tensor, axes, keep_axes)
   deftensor clip(tensor, tensor_min, tensor_max)
