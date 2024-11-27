@@ -165,6 +165,7 @@ defmodule EMLX do
   deftensor pad(tensor, axes, low_pad_size, high_pad_size, pad_value)
   deftensor sort(tensor, axis)
   deftensor argsort(tensor, axis)
+  deftensor tri_inv(tensor, upper)
 
   deftensor conv_general(
               tensor_input,

@@ -135,6 +135,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def tri_inv(_tensor, _upper, _device) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def conv_general(
         _tensor_input,
         _tensor_kernel,

@@ -413,6 +413,14 @@ NIF(einsum) {
                            device));
 }
 
+NIF(tri_inv) {
+  TENSOR_PARAM(0, tensor);
+  PARAM(1, bool, upper);
+  DEVICE_PARAM(2, device);
+
+  TENSOR(mlx::core::linalg::tri_inv(*tensor, upper, device));
+}
+
 NIF(conv_general) {
   TENSOR_PARAM(0, tensor_input);
   TENSOR_PARAM(1, tensor_kernel);
@@ -1021,7 +1029,8 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"deallocate", 1, deallocate},
                                  {"max", 4, max},
                                  {"min", 4, min},
-                                 {"clip", 4, clip}};
+                                 {"clip", 4, clip},
+                                 {"tri_inv", 3, tri_inv}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)

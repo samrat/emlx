@@ -1368,12 +1368,93 @@ defmodule EMLX.Backend do
     |> to_nx(out)
   end
 
+  @impl true
+  def triangular_solve(out, a, b, opts) do
+    if Nx.Type.complex?(out.type) do
+      raise "complex numbers not supported yet"
+    end
+
+    a_mx =
+      case opts[:transform_a] do
+        :none ->
+          to_typed_ref(from_nx(a), a.type, {:f, 32})
+
+        :transpose ->
+          a |> from_nx() |> to_typed_ref(a.type, {:f, 32}) |> EMLX.transpose([-2, -1])
+      end
+
+    b_mx = to_typed_ref(from_nx(b), b.type, {:f, 32})
+
+    upper = !opts[:lower]
+
+    a_inv_mx = EMLX.tri_inv(a_mx, upper)
+
+    out_mx =
+      if opts[:left_side] do
+        # Solve AX = B -> X = tri_inv(A)@B
+        {batch_axes, [_m, n]} = Nx.axes(EMLX.shape(a_inv_mx)) |> Enum.split(-2)
+
+        {b_batch_axes, b_contract_axes} =
+          if Nx.rank(b) == 1 do
+            {[], [0]}
+          else
+            case Nx.axes(b) |> Enum.split(length(batch_axes)) do
+              {batch, [x]} ->
+                {batch, [x]}
+
+              {batch, [m, _n]} ->
+                {batch, [m]}
+            end
+          end
+
+        EMLX.einsum(
+          a_inv_mx,
+          b_mx,
+          dot_spec_to_einsum_spec(
+            EMLX.shape(a_inv_mx),
+            EMLX.shape(b_mx),
+            [n],
+            batch_axes,
+            b_contract_axes,
+            b_batch_axes
+          )
+        )
+      else
+        # Solve XA = B -> X = B@tri_inv(A)
+        {batch_axes, [m, _n]} = Nx.axes(EMLX.shape(a_inv_mx)) |> Enum.split(-2)
+
+        {b_batch_axes, b_contract_axes} =
+          if Nx.rank(b) == 1 do
+            {[], [0]}
+          else
+            {batch, [_m, n]} = Nx.axes(b) |> Enum.split(-2)
+            {batch, [n]}
+          end
+
+        EMLX.einsum(
+          b_mx,
+          a_inv_mx,
+          dot_spec_to_einsum_spec(
+            EMLX.shape(b_mx),
+            EMLX.shape(a_inv_mx),
+            b_contract_axes,
+            b_batch_axes,
+            [m],
+            batch_axes
+          )
+        )
+      end
+
+    out_mx
+    |> EMLX.astype(to_mlx_type(out.type))
+    |> to_nx(out)
+  end
+
   for {op, arity} <- [
         reduce: 5,
         window_reduce: 6,
         population_count: 2,
-        count_leading_zeros: 2,
-        triangular_solve: 4
+        count_leading_zeros: 2
       ] do
     args = List.duplicate(Macro.var(:_, __MODULE__), arity)
     @impl true
