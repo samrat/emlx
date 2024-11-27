@@ -1,11 +1,20 @@
 # EMLX
 
-**TODO**
+EMLX is the Nx Backend for the [MLX](https://github.com/ml-explore/mlx) library.
 
-## Installation
+Because of MLX's nature, EMLX is only supported on macOS.
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `emlx` to your list of dependencies in `mix.exs`:
+The M-Series Macs have an unified memory architecture, which allows for more passing data between the CPU and GPU to be effectively a no-op.
+
+Besides the backend, this library also provides an Nx.Defn.Compiler implementation that allows for JIT compilation of Nx functions to MLX kernels.
+Using this compiler is not much different from just using the default `Nx.Defn.Evaluator`, but because it sets an explicit `EMLX.eval` call,
+it allows for better caching of Nx-defined functions by MLX itself.
+
+Metal does not support 64-bit floats, so neither MLX nor EMLX do either.
+
+## Usage
+
+To use EMLX, you can add it as a dependency in your `mix.exs`:
 
 ```elixir
 def deps do
@@ -15,14 +24,27 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/emlx>.
+Then, you just need to set `EMLX.Backend` as the default backend for your Nx functions:
 
+```elixir
+Nx.default_backend(EMLX.Backend)
+
+# Setting the device to the CPU (default)
+Nx.default_backend({EMLX.Backend, device: :cpu})
+
+# Setting the device to the GPU
+Nx.default_backend({EMLX.Backend, device: :gpu})
+```
+
+If desireable, you can also set the default compiler:
+
+```elixir
+Nx.Defn.default_options(compiler: EMLX.Compiler)
+```
 
 ### MLX binaries
 
-EMLX relies on the [MLX](https://github.com/ml-explore/mlx) library to function, and currently EMLX will download precompiled builds from [mlx-build](https://github.com/cocoa-xu/mlx-build). 
+EMLX relies on the [MLX](https://github.com/ml-explore/mlx) library to function, and currently EMLX will download precompiled builds from [mlx-build](https://github.com/cocoa-xu/mlx-build).
 
 Compiling from source and using customized precompiled binaries will be supported soon.
 
@@ -38,13 +60,13 @@ The version of the MLX binary to download. By default EMLX will always use the l
 
 ##### `LIBMLX_ENABLE_JIT`
 
-Defaults to `false`. 
+Defaults to `false`.
 
 Using JIT compilation for Metal kernels when set to `true`.
 
 ##### `LIBMLX_ENABLE_DEBUG`
 
-Defaults to `false`. 
+Defaults to `false`.
 
 Enhance metal debug workflow by enabling debug information in the Metal shaders when set to `true`.
 
