@@ -383,13 +383,13 @@ defmodule EMLX.Backend do
         raise "Nx.Backend.#{unquote(op)}/3 with tie_break: :high is not supported in EMLX"
       end
 
-      t_tx = from_nx(tensor)
+      t_mx = from_nx(tensor)
 
       result =
         if axis do
-          EMLX.unquote(op)(t_tx, axis, keep_axis)
+          EMLX.unquote(op)(t_mx, axis, keep_axis)
         else
-          EMLX.unquote(op)(t_tx, keep_axis)
+          EMLX.unquote(op)(t_mx, keep_axis)
         end
 
       result
@@ -444,7 +444,7 @@ defmodule EMLX.Backend do
 
   @impl true
   def put_slice(out, input, start_indices_unbounded, slice) do
-    input_tx = from_nx(input)
+    input_mx = from_nx(input)
 
     slice_shape_list = Tuple.to_list(slice.shape)
 
@@ -458,11 +458,11 @@ defmodule EMLX.Backend do
       end)
       |> Enum.unzip()
 
-    slice_tx = slice |> from_nx() |> EMLX.astype(to_mlx_type(out.type))
+    slice_mx = slice |> from_nx() |> EMLX.astype(to_mlx_type(out.type))
 
-    input_tx
+    input_mx
     |> EMLX.astype(to_mlx_type(out.type))
-    |> EMLX.slice_update(slice_tx, start_indices, stop_indices)
+    |> EMLX.slice_update(slice_mx, start_indices, stop_indices)
     |> to_nx(out)
   end
 
@@ -653,8 +653,8 @@ defmodule EMLX.Backend do
         right_axes,
         right_batched_axes
       ) do
-    left_tx = from_nx(left)
-    right_tx = from_nx(right)
+    left_mx = from_nx(left)
+    right_mx = from_nx(right)
 
     computation_out_type =
       if Nx.Type.integer?(out_type), do: Nx.Type.to_floating(out_type), else: out_type
@@ -671,16 +671,16 @@ defmodule EMLX.Backend do
         )
 
       EMLX.einsum(
-        to_typed_ref(left_tx, left_type, computation_out_type),
-        to_typed_ref(right_tx, right_type, computation_out_type),
+        to_typed_ref(left_mx, left_type, computation_out_type),
+        to_typed_ref(right_mx, right_type, computation_out_type),
         einsum_spec
       )
       |> to_typed_ref(computation_out_type, out_type)
       |> to_nx(out)
     else
       EMLX.tensordot(
-        to_typed_ref(left_tx, left_type, computation_out_type),
-        to_typed_ref(right_tx, right_type, computation_out_type),
+        to_typed_ref(left_mx, left_type, computation_out_type),
+        to_typed_ref(right_mx, right_type, computation_out_type),
         left_axes,
         right_axes
       )
@@ -695,7 +695,6 @@ defmodule EMLX.Backend do
     [
       :abs,
       :ceil,
-      :conjugate,
       :floor,
       :negate,
       :round,
@@ -703,7 +702,6 @@ defmodule EMLX.Backend do
       :real,
       :imag,
       :is_nan,
-      :is_infinity,
       :logical_not,
       :bitwise_not
     ] ++
@@ -739,6 +737,34 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def conjugate(out, tensor) do
+    tensor
+    |> from_nx()
+    |> EMLX.astype(to_mlx_type(out.type))
+    |> EMLX.conjugate()
+    |> to_nx(out)
+  end
+
+  @impl true
+  def is_infinity(out, %T{type: {:c, _}} = tensor) do
+    t_mx = from_nx(tensor)
+
+    imag_mx = t_mx |> EMLX.imag() |> EMLX.is_infinity()
+    real_mx = t_mx |> EMLX.real() |> EMLX.is_infinity()
+
+    real_mx
+    |> EMLX.logical_or(imag_mx)
+    |> to_nx(out)
+  end
+
+  def is_infinity(out, tensor) do
+    tensor
+    |> from_nx()
+    |> EMLX.is_infinity()
+    |> to_nx(out)
+  end
+
+  @impl true
   def cbrt(_out, tensor) do
     Nx.pow(tensor, 1 / 3)
   end
@@ -763,8 +789,8 @@ defmodule EMLX.Backend do
     @impl true
     def unquote(op)(out, l, r) do
       {left, right} = maybe_upcast(l, r)
-      {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
-      result = EMLX.unquote(op)(left_tx, right_tx)
+      {left_mx, right_mx} = maybe_broadcast_bin_args(out.shape, left, right)
+      result = EMLX.unquote(op)(left_mx, right_mx)
 
       result
       |> EMLX.astype(to_mlx_type(out.type))
@@ -821,14 +847,14 @@ defmodule EMLX.Backend do
   def all_close(out, a, b, opts) do
     atol = opts[:atol] || 1.0e-4
     rtol = opts[:rtol] || 1.0e-8
-    equal_nan = true
+    equal_nan = opts[:equal_nan] == true
 
     EMLX.allclose(from_nx(a), from_nx(b), atol, rtol, equal_nan)
     |> to_nx(out)
   end
 
   ops =
-    [:divide, :quotient, :remainder, :atan2] ++
+    [:divide, :quotient, :atan2] ++
       [:right_shift, :logical_and, :logical_or, :logical_xor] ++
       [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
       [:bitwise_and, :bitwise_or, :bitwise_xor]
@@ -837,20 +863,38 @@ defmodule EMLX.Backend do
     @impl true
     def unquote(op)(out, l, r) do
       {left, right} = maybe_upcast(l, r)
-      {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+      {left_mx, right_mx} = maybe_broadcast_bin_args(out.shape, left, right)
 
-      EMLX.unquote(op)(left_tx, right_tx)
+      EMLX.unquote(op)(left_mx, right_mx)
       |> EMLX.astype(to_mlx_type(out.type))
       |> to_nx(out)
     end
   end
 
   @impl true
+  def remainder(out, l, r) do
+    {left, right} = maybe_upcast(l, r)
+    {left_mx, right_mx} = maybe_broadcast_bin_args(out.shape, left, right)
+
+    {device, _} =
+      rem_mx =
+      EMLX.remainder(left_mx, right_mx)
+      |> EMLX.astype(to_mlx_type(out.type))
+
+    zero = EMLX.scalar_tensor(0, to_mlx_type(left.type), device)
+
+    left_mx
+    |> EMLX.less(zero)
+    |> EMLX.where(EMLX.subtract(rem_mx, right_mx), rem_mx)
+    |> to_nx(out)
+  end
+
+  @impl true
   def min(out, l, r) do
     {left, right} = maybe_upcast(l, r)
-    {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+    {left_mx, right_mx} = maybe_broadcast_bin_args(out.shape, left, right)
 
-    EMLX.minimum(left_tx, right_tx)
+    EMLX.minimum(left_mx, right_mx)
     |> EMLX.astype(to_mlx_type(out.type))
     |> to_nx(out)
   end
@@ -858,9 +902,9 @@ defmodule EMLX.Backend do
   @impl true
   def max(out, l, r) do
     {left, right} = maybe_upcast(l, r)
-    {left_tx, right_tx} = maybe_broadcast_bin_args(out.shape, left, right)
+    {left_mx, right_mx} = maybe_broadcast_bin_args(out.shape, left, right)
 
-    EMLX.maximum(left_tx, right_tx)
+    EMLX.maximum(left_mx, right_mx)
     |> EMLX.astype(to_mlx_type(out.type))
     |> to_nx(out)
   end
@@ -869,7 +913,7 @@ defmodule EMLX.Backend do
   def clip(out, tensor, min, max) do
     tensor
     |> from_nx()
-    |> EMLX.clip(min, max)
+    |> EMLX.clip(from_nx(min), from_nx(max))
     |> to_nx(out)
   end
 
@@ -927,7 +971,7 @@ defmodule EMLX.Backend do
   end
 
   defp maybe_broadcast_bin_args(out_shape, l, r) do
-    l_tx =
+    l_mx =
       case l.shape do
         ^out_shape ->
           from_nx(l)
@@ -936,13 +980,13 @@ defmodule EMLX.Backend do
           l |> from_nx() |> EMLX.broadcast_to(out_shape)
       end
 
-    r_tx =
+    r_mx =
       case r.shape do
         ^out_shape -> from_nx(r)
         _ -> r |> from_nx() |> EMLX.broadcast_to(out_shape)
       end
 
-    {l_tx, r_tx}
+    {l_mx, r_mx}
   end
 
   @impl true
@@ -1051,7 +1095,8 @@ defmodule EMLX.Backend do
   for op <- [:sum, :product, :max, :min] do
     @impl true
     def unquote(:"window_#{op}")(out, tensor, window_shape, opts) do
-      # TODO: add strides and dilations
+      # TODO: window dilations can be implemented after we support internal padding
+      # in Nx.pad (we should have pad_internal as a shared defp)
       tensor_rank = tuple_size(tensor.shape)
 
       axes =
@@ -1263,7 +1308,7 @@ defmodule EMLX.Backend do
 
   # Helper function to handle different scalar types
   defp constant_serialize_scalar(scalar) when is_number(scalar), do: scalar
-  defp constant_serialize_scalar(%Complex{} = c), do: Complex.abs(c)
+  defp constant_serialize_scalar(%Complex{} = c), do: {c.re, c.im}
 
   defp to_typed_ref(tensor, expected_type, expected_type),
     do: tensor

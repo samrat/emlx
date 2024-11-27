@@ -28,29 +28,19 @@ defmodule EMLX.Nx.DoctestTest do
     cos: 1,
     standard_deviation: 2,
     cosh: 1,
-    log10: 1
+    log10: 1,
+    acos: 1,
+    covariance: 3
   ]
 
   @to_be_fixed [
     :moduledoc,
-    real: 1,
-    imag: 1,
-    acosh: 1,
-    acos: 1,
-    phase: 1,
-    remainder: 2,
-    complex: 2,
-    is_infinity: 1,
+    # window_* do not support window_dilations yet
     window_sum: 3,
     window_max: 3,
     window_min: 3,
     window_product: 3,
-    window_mean: 3,
-    all_close: 3,
-    conjugate: 1,
-    bitwise_not: 1,
-    clip: 3,
-    covariance: 3
+    window_mean: 3
   ]
 
   @not_supported [

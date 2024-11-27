@@ -329,20 +329,28 @@ NIF(from_blob) {
 }
 
 NIF(scalar_tensor) {
-  SCALAR_PARAM(0, scalar);
+  SCALAR_PARAM(0, scalar, is_complex);
   TYPE_PARAM(1, type);
   // DEVICE_PARAM(2, device);
 
-  TENSOR(mlx::core::array(scalar, type))
+  if (is_complex) {
+    TENSOR(mlx::core::array(complex_scalar, type))
+  } else {
+    TENSOR(mlx::core::array(scalar, type))
+  }
 }
 
 NIF(full) {
-  SCALAR_PARAM(0, scalar);
+  SCALAR_PARAM(0, scalar, is_complex);
   SHAPE_PARAM(1, shape);
   TYPE_PARAM(2, type);
   DEVICE_PARAM(3, device);
 
-  TENSOR(mlx::core::full(shape, scalar, type, device));
+  if (is_complex) {
+    TENSOR(mlx::core::full(shape, complex_scalar, type, device));
+  } else {
+    TENSOR(mlx::core::full(shape, scalar, type, device));
+  }
 }
 
 NIF(arange) {
@@ -732,7 +740,7 @@ NIF(bitwise_not) {
   DEVICE_PARAM(1, device);
 
   auto dtype = (*a).dtype();
-  auto mask = mlx::core::full({1}, 0xFFFFFFFFFFFFFFFF, dtype, device);
+  auto mask = mlx::core::full({}, 0xFFFFFFFFFFFFFFFF, dtype, device);
   TENSOR(mlx::core::subtract(mask, *a, device));
 }
 BINARY_OP(left_shift)
@@ -961,6 +969,8 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"sigmoid", 2, sigmoid},
                                  {"asin", 2, asin},
                                  {"asinh", 2, asinh},
+                                 {"acos", 2, acos},
+                                 {"acosh", 2, acosh},
                                  {"cos", 2, cos},
                                  {"cosh", 2, cosh},
                                  {"atan", 2, atan},

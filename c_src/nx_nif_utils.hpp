@@ -46,11 +46,16 @@ ErlNifResourceType *TENSOR_TYPE;
   ATOM_PARAM(ARGN, VAR##_atom)                                                 \
   mlx::core::Device VAR = string2device(VAR##_atom)
 
-#define SCALAR_PARAM(ARGN, VAR)                                                \
+#define SCALAR_PARAM(ARGN, VAR, IS_COMPLEX_VAR)                                \
+  bool IS_COMPLEX_VAR = false;                                                 \
   double VAR;                                                                  \
-  std::vector<double> complex_##VAR;                                           \
-  if (nx::nif::get_tuple<double>(env, argv[ARGN], complex_##VAR)) {            \
-    return nx::nif::error(env, "Complex numbers are not supported in MLX");    \
+  std::complex<float> complex_##VAR;                                           \
+  std::vector<double> complex_reader_##VAR;                                    \
+  if (nx::nif::get_tuple<double>(env, argv[ARGN], complex_reader_##VAR)) {     \
+    complex_##VAR =                                                            \
+        std::complex<float>(static_cast<float>(complex_reader_##VAR[0]),       \
+                            static_cast<float>(complex_reader_##VAR[1]));      \
+    IS_COMPLEX_VAR = true;                                                     \
   } else if (enif_get_double(env, argv[ARGN], &VAR) == 0) {                    \
     int64_t int64_##VAR;                                                       \
     if (!enif_get_int64(env, argv[ARGN], (ErlNifSInt64 *)&int64_##VAR))        \
