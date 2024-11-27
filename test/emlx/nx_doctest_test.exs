@@ -25,7 +25,11 @@ defmodule EMLX.Nx.DoctestTest do
     cosh: 1,
     log10: 1,
     acos: 1,
-    covariance: 3
+    covariance: 3,
+    # These fail because we're using different representation types
+    atan2: 2,
+    as_type: 2,
+    from_binary: 3
   ]
 
   @to_be_fixed [
@@ -51,18 +55,6 @@ defmodule EMLX.Nx.DoctestTest do
   ]
 
   @not_supported [
-    # Does not support f8 (yet?)
-    tensor: 2,
-    # Does not support u2 (yet?)
-    bit_size: 1,
-    # f64 not supported
-    from_binary: 3,
-    # f64 not supported
-    iota: 2,
-    # f64 not supported
-    atan2: 2,
-    # f64 not supported
-    as_type: 2,
     reduce: 4,
     window_reduce: 5,
     population_count: 1,
