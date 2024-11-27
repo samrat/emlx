@@ -7,13 +7,12 @@ defmodule EMLX.Nx.DoctestTest do
   end
 
   @not_implemented_yet [
-    pad: 3,
-    conv: 3,
+    # not supported yet
     window_scatter_min: 5,
+    # not supported yet
     window_scatter_max: 5,
-    reverse: 2,
-    slice: 4,
-    reflect: 2
+    # not supported yet
+    reverse: 2
   ]
 
   @rounding_error [
@@ -40,7 +39,12 @@ defmodule EMLX.Nx.DoctestTest do
     window_max: 3,
     window_min: 3,
     window_product: 3,
-    window_mean: 3
+    window_mean: 3,
+    # integer types not supported, and complex types not supported
+    # complex can use the definition Torchx uses
+    conv: 3,
+    # missing support for inner padding
+    pad: 3
   ]
 
   @not_supported [
