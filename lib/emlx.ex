@@ -1,3 +1,7 @@
+defmodule EMLX.NIFError do
+  defexception [:message]
+end
+
 defmodule EMLX.Macro do
   @moduledoc false
 
@@ -97,7 +101,6 @@ defmodule EMLX.Macro do
 end
 
 defmodule EMLX do
-  alias EMLX.NIF, as: NIF
   use EMLX.Macro
 
   defguard is_tensor(device, ref) when is_reference(ref) and is_atom(device)
@@ -122,7 +125,6 @@ defmodule EMLX do
   end
 
   ## Creation / conversion
-  def eye(size, type, device), do: eye(size, size, type, device)
   defdevice eye(m, n, type, device)
   defdevice from_blob(blob, shape, type, device)
   defdevice scalar_tensor(scalar, type, device)
@@ -260,7 +262,7 @@ defmodule EMLX do
 
   defp unwrap!(:ok), do: :ok
   defp unwrap!({:ok, result}), do: result
-  defp unwrap!({:error, error}), do: raise("EMLX: " <> List.to_string(error))
+  defp unwrap!({:error, error}), do: raise(EMLX.NIFError, List.to_string(error))
 
   defp unwrap_tensor!(tagged_result, device) do
     case unwrap!(tagged_result) do
@@ -275,49 +277,35 @@ defmodule EMLX do
     end
   end
 
-  defp prepare_tensors_list!(tensors_list, dev) do
-    tensors =
-      Enum.map(tensors_list, fn
-        {dev, ref} when is_tensor(dev, ref) ->
-          ref
+  defp prepare_tensors_list!(tensors_list, device) do
+    Enum.map_reduce(tensors_list, device, fn
+      {dev, ref}, device when is_tensor(dev, ref) ->
+        {ref, merge_device(device, dev)}
 
-        # TODO: double check if this is correct / does not have overhead
-        # {other_dev, ref} when is_tensor(other_dev, ref) ->
-        #   raise ArgumentError, "cannot perform operation across devices #{dev} and #{other_dev}"
-
-        bad_tensor ->
-          raise ArgumentError, "expected a EMLX tensor, got: #{inspect(bad_tensor)}"
-      end)
-
-    {tensors, dev}
-  end
-
-  defp prepare_tensors!(tensors) do
-    Enum.map_reduce(tensors, nil, fn
-      {dev, ref}, nil when is_tensor(dev, ref) ->
-        {ref, dev}
-
-      {dev, ref}, _dev when is_tensor(dev, ref) ->
-        {ref, dev}
-
-      [{dev, ref} | _] = tensors, nil when is_tensor(dev, ref) ->
-        prepare_tensors_list!(tensors, dev)
-
-      tensors, dev when is_list(tensors) ->
-        prepare_tensors_list!(tensors, dev)
-
-      bad_tensor, _dev ->
+      bad_tensor, _device ->
         raise ArgumentError, "expected a EMLX tensor, got: #{inspect(bad_tensor)}"
     end)
   end
 
-  def deallocate(tensor_ref) do
-    NIF.deallocate(tensor_ref)
+  defp prepare_tensors!(tensors) do
+    Enum.map_reduce(tensors, :cpu, fn
+      {dev, ref}, device when is_tensor(dev, ref) ->
+        {ref, merge_device(device, dev)}
+
+      [{dev, ref} | _] = tensors, device when is_tensor(dev, ref) ->
+        prepare_tensors_list!(tensors, device)
+
+      bad_tensor, _device ->
+        raise ArgumentError, "expected a EMLX tensor, got: #{inspect(bad_tensor)}"
+    end)
   end
 
-  def eval(tensor) do
-    NIF.eval(tensor)
-  end
+  defp merge_device(:gpu, _), do: :gpu
+  defp merge_device(_, :gpu), do: :gpu
+  defp merge_device(_, _), do: :cpu
+
+  defvalue deallocate(tensor_ref)
+  defvalue eval(tensor)
 
   deftensor slice(tensor, starts, stops, strides)
   deftensor slice_update(tensor, tensor_updates, starts, stops)

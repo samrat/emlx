@@ -3,7 +3,7 @@ defmodule EMLX.NIF do
   Elixir bindings for MLX array operations.
   """
 
-  for {name, arity} <- EMLX.__mlx_functions__() ++ [eval: 1, deallocate: 1] do
+  for {name, arity} <- EMLX.__mlx_functions__() do
     args = Macro.generate_arguments(arity, __MODULE__)
 
     def unquote(name)(unquote_splicing(args)) do
