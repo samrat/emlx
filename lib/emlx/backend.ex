@@ -1160,6 +1160,97 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def window_scatter_min(out, tensor, source, init_value, window_dims_tuple, opts) do
+    window_scatter_function(
+      &Nx.argmin(&1, axis: -1, tie_break: :high),
+      out,
+      tensor,
+      source,
+      init_value,
+      window_dims_tuple,
+      opts
+    )
+  end
+
+  @impl true
+  def window_scatter_max(out, tensor, source, init_value, window_dims_tuple, opts) do
+    window_scatter_function(
+      &Nx.argmax(&1, axis: -1),
+      out,
+      tensor,
+      source,
+      init_value,
+      window_dims_tuple,
+      opts
+    )
+  end
+
+  defp window_scatter_function(function, out, tensor, source, init_value, window_dims_tuple, opts) do
+    # TODO: support window dilations
+    unfold_flat = fn tensor ->
+      {device, _} = t_mx = from_nx(tensor)
+      {_, pad_mx} = EMLX.scalar_tensor(0, EMLX.scalar_type(t_mx), device)
+
+      {low_pad, high_pad} = Enum.unzip(opts[:padding])
+
+      padded_mx = EMLX.pad(t_mx, Nx.axes(tensor), low_pad, high_pad, pad_mx)
+
+      unfolded_mx =
+        padded_mx
+        |> sliding_window_view(
+          EMLX.shape(padded_mx),
+          window_dims_tuple,
+          opts[:strides]
+        )
+        |> EMLX.astype(to_mlx_type(out.type))
+
+      unfolded_shape = EMLX.shape(unfolded_mx)
+      unfolded = to_nx(unfolded_mx, %{tensor | shape: unfolded_shape})
+
+      {to_keep, to_flatten} =
+        unfolded_shape
+        |> Tuple.to_list()
+        |> Enum.split(-tuple_size(window_dims_tuple))
+
+      flat_shape =
+        to_keep
+        |> List.to_tuple()
+        |> then(&Tuple.insert_at(&1, tuple_size(&1), Enum.product(to_flatten)))
+
+      Nx.reshape(unfolded, flat_shape)
+    end
+
+    arg_idx =
+      tensor
+      |> then(unfold_flat)
+      |> then(function)
+
+    indices_to_flatten =
+      tensor
+      |> Nx.axes()
+      |> Enum.map(fn axis ->
+        tensor
+        |> Nx.shape()
+        |> Nx.iota(axis: axis, backend: EMLX.Backend)
+        |> then(unfold_flat)
+        |> Nx.take_along_axis(Nx.new_axis(arg_idx, -1), axis: -1)
+      end)
+      |> Nx.concatenate(axis: -1)
+
+    num_axes = tuple_size(out.shape)
+    num_rows = div(Nx.size(indices_to_flatten), num_axes)
+    indices = Nx.reshape(indices_to_flatten, {num_rows, num_axes})
+
+    flat_source = Nx.flatten(source)
+
+    init_value
+    |> Nx.backend_transfer(EMLX.Backend)
+    |> Nx.broadcast(out.shape)
+    |> Nx.indexed_add(indices, flat_source)
+    |> Nx.as_type(out.type)
+  end
+
+  @impl true
   def to_batched(out, tensor, opts) do
     leftover = opts[:leftover]
 
@@ -1293,8 +1384,6 @@ defmodule EMLX.Backend do
 
   for {op, arity} <- [
         lu: 3,
-        window_scatter_max: 6,
-        window_scatter_min: 6,
         to_pointer: 2,
         from_pointer: 5
       ] do

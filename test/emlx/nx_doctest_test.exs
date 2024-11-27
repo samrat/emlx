@@ -8,10 +8,6 @@ defmodule EMLX.Nx.DoctestTest do
 
   @not_implemented_yet [
     # not supported yet
-    window_scatter_min: 5,
-    # not supported yet
-    window_scatter_max: 5,
-    # not supported yet
     reverse: 2
   ]
 
@@ -44,7 +40,14 @@ defmodule EMLX.Nx.DoctestTest do
     # complex can use the definition Torchx uses
     conv: 3,
     # missing support for inner padding
-    pad: 3
+    pad: 3,
+    # MLX sorts NaNs lowest, Nx sorts them highest
+    argmin: 2,
+    argmax: 2,
+    argsort: 2,
+    # Missing support for window dilations and for tie_break: :high
+    window_scatter_max: 5,
+    window_scatter_min: 5
   ]
 
   @not_supported [
@@ -64,10 +67,6 @@ defmodule EMLX.Nx.DoctestTest do
     window_reduce: 5,
     population_count: 1,
     count_leading_zeros: 1,
-    # MLX sorts NaNs lowest, Nx sorts them highest
-    argmin: 2,
-    argmax: 2,
-    argsort: 2,
     sort: 2
   ]
 
