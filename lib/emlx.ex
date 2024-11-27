@@ -5,6 +5,19 @@ defmodule EMLX.Macro do
     quote do
       import unquote(__MODULE__)
       Module.register_attribute(EMLX, :mlx_function, accumulate: true)
+
+      @before_compile EMLX.Macro
+    end
+  end
+
+  @doc false
+  defmacro __before_compile__(env) do
+    mlx_functions = Module.get_attribute(env.module, :mlx_function)
+
+    quote do
+      def __mlx_functions__ do
+        unquote(mlx_functions)
+      end
     end
   end
 
@@ -64,7 +77,7 @@ defmodule EMLX.Macro do
     end
 
     quote do
-      @mlx_function {unquote(name), unquote(length(args))}
+      @mlx_function {unquote(name), unquote(length(args) + length(extra))}
       def unquote(name)(unquote_splicing(args)) do
         {unquote(tensors), device} = prepare_tensors!(unquote(tensors))
 
