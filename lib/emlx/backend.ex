@@ -656,9 +656,8 @@ defmodule EMLX.Backend do
     left_tx = from_nx(left)
     right_tx = from_nx(right)
 
-    if not Nx.Type.float?(out_type) do
-      raise "MLX only supports floating point output types in tensordot"
-    end
+    computation_out_type =
+      if Nx.Type.integer?(out_type), do: Nx.Type.to_floating(out_type), else: out_type
 
     if left_batched_axes != [] or right_batched_axes != [] do
       einsum_spec =
@@ -671,19 +670,21 @@ defmodule EMLX.Backend do
           right_batched_axes
         )
 
-      to_typed_ref(left_tx, left_type, out_type)
-      |> EMLX.einsum(
-        to_typed_ref(right_tx, right_type, out_type),
+      EMLX.einsum(
+        to_typed_ref(left_tx, left_type, computation_out_type),
+        to_typed_ref(right_tx, right_type, computation_out_type),
         einsum_spec
       )
+      |> to_typed_ref(computation_out_type, out_type)
       |> to_nx(out)
     else
       EMLX.tensordot(
-        to_typed_ref(left_tx, left_type, out_type),
-        to_typed_ref(right_tx, right_type, out_type),
+        to_typed_ref(left_tx, left_type, computation_out_type),
+        to_typed_ref(right_tx, right_type, computation_out_type),
         left_axes,
         right_axes
       )
+      |> to_typed_ref(computation_out_type, out_type)
       |> to_nx(out)
     end
   end
@@ -1049,7 +1050,7 @@ defmodule EMLX.Backend do
 
   for op <- [:sum, :product, :max, :min] do
     @impl true
-    def unquote(:"window_#{op}")(out, tensor, window_shape, _opts) do
+    def unquote(:"window_#{op}")(out, tensor, window_shape, opts) do
       # TODO: add strides and dilations
       tensor_rank = tuple_size(tensor.shape)
 
@@ -1060,28 +1061,57 @@ defmodule EMLX.Backend do
           tensor_rank + axis
         end)
 
-      tensor
-      |> from_nx()
-      |> sliding_window_view(tensor.shape, window_shape)
+      {low_pad, high_pad} = Enum.unzip(opts[:padding])
+      {device, _} = t_mx = from_nx(tensor)
+
+      {_device, pad_mx} =
+        case unquote(op) do
+          :sum ->
+            EMLX.scalar_tensor(0, to_mlx_type(out.type), device)
+
+          :product ->
+            EMLX.scalar_tensor(1, to_mlx_type(out.type), device)
+
+          :max ->
+            Nx.Constants.min(tensor.type, backend: {EMLX.Backend, device: device}) |> from_nx()
+
+          :min ->
+            Nx.Constants.max(tensor.type, backend: {EMLX.Backend, device: device}) |> from_nx()
+        end
+
+      padded_mx = EMLX.pad(t_mx, Nx.axes(tensor), low_pad, high_pad, pad_mx)
+
+      padded_mx
+      |> sliding_window_view(EMLX.shape(padded_mx), window_shape, opts[:strides])
       |> EMLX.unquote(op)(axes, false)
       |> to_nx(out)
     end
   end
 
-  defp sliding_window_view(t, tensor_shape, window_shape) do
+  defp sliding_window_view(t, tensor_shape, window_shape, opt_strides) do
     strides = EMLX.strides(t)
 
     strides = strides ++ strides
     window_shape_list = Tuple.to_list(window_shape)
 
     shape_trimmed =
-      Enum.zip_with(Tuple.to_list(tensor_shape), window_shape_list, fn current, dim ->
-        current - dim + 1
-      end)
+      Enum.zip_with(
+        [Tuple.to_list(tensor_shape), window_shape_list],
+        fn [current, dim] ->
+          current - dim + 1
+        end
+      )
 
-    out_shape = List.to_tuple(shape_trimmed ++ window_shape_list)
+    stops = shape_trimmed ++ window_shape_list
+    stride_shape = List.to_tuple(stops)
 
-    EMLX.as_strided(t, out_shape, strides, 0)
+    starts = List.duplicate(0, tuple_size(stride_shape))
+
+    slice_strides = opt_strides ++ List.duplicate(1, tuple_size(window_shape))
+
+    t
+    |> EMLX.as_strided(stride_shape, strides, 0)
+    |> EMLX.slice(starts, stops, slice_strides)
   end
 
   @impl true

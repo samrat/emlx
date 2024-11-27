@@ -9,10 +9,6 @@ defmodule EMLX.Nx.DoctestTest do
   @not_implemented_yet [
     pad: 3,
     conv: 3,
-    # dot does not support integer types
-    dot: 2,
-    dot: 4,
-    dot: 6,
     window_scatter_min: 5,
     window_scatter_max: 5,
     reverse: 2,

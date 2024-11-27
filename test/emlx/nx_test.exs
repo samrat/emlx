@@ -480,7 +480,6 @@ defmodule EMLX.NxTest do
       assert_equal(Nx.dot(t2, t1), Nx.tensor(32))
     end
 
-    @tag :skip
     test "make_diagonal" do
       t =
         [1, 2, 3]
@@ -1000,8 +999,6 @@ defmodule EMLX.NxTest do
       )
     end
 
-    # padding and strides are not supported yet
-    @tag :skip
     test "supports padding" do
       t = Nx.tensor([[[4.0, 2.0, 3.0], [2.0, 5.0, 6.5]], [[1.2, 2.2, 3.2], [4.0, 5.0, 6.2]]])
       result = Nx.window_max(t, {2, 1, 1}, strides: [2, 1, 1], padding: [{1, 1}, {0, 0}, {1, 1}])
@@ -1027,7 +1024,7 @@ defmodule EMLX.NxTest do
       )
     end
 
-    # strides are not supported yet
+    # does not support window_dilations yet
     @tag :skip
     test "works with non-default options" do
       t = Nx.tensor([[[4, 2, 1, 3], [4, 2, 1, 7]], [[1, 2, 5, 7], [1, 8, 9, 2]]])
@@ -1064,8 +1061,6 @@ defmodule EMLX.NxTest do
       )
     end
 
-    # padding and strides are not supported yet
-    @tag :skip
     test "fails with non-zero padding" do
       t = Nx.tensor([[[4.0, 2.0, 3.0], [2.0, 5.0, 6.5]], [[1.2, 2.2, 3.2], [4.0, 5.0, 6.2]]])
       result = Nx.window_min(t, {2, 1, 1}, strides: [2, 1, 1], padding: [{1, 1}, {0, 0}, {1, 1}])
@@ -1091,7 +1086,7 @@ defmodule EMLX.NxTest do
       )
     end
 
-    # strides are not supported yet
+    # window_dilations are not supported yet
     @tag :skip
     test "works with non-default options" do
       t = Nx.tensor([[[4, 2, 1, 3], [4, 2, 1, 7]], [[1, 2, 5, 7], [1, 8, 9, 2]]])
@@ -1128,10 +1123,79 @@ defmodule EMLX.NxTest do
       )
     end
 
-    # strides and padding are not supported yet
-    @tag :skip
+    test "supports strides" do
+      t = Nx.iota({2, 4, 4})
+      result = Nx.window_sum(t, {1, 2, 2}, strides: [1, 2, 2])
+
+      expected =
+        Nx.tensor([
+          [
+            [10, 18],
+            [42, 50]
+          ],
+          [
+            [74, 82],
+            [106, 114]
+          ]
+        ])
+
+      assert_all_close(result, expected)
+
+      result = Nx.window_sum(t, {1, 2, 2}, strides: [1, 2, 1])
+
+      expected =
+        Nx.tensor([
+          [
+            [10, 14, 18],
+            [42, 46, 50]
+          ],
+          [
+            [74, 78, 82],
+            [106, 110, 114]
+          ]
+        ])
+
+      assert_all_close(result, expected)
+
+      result = Nx.window_sum(t, {1, 2, 2}, strides: [2, 1, 1])
+
+      expected =
+        Nx.tensor([
+          [
+            [10, 14, 18],
+            [26, 30, 34],
+            [42, 46, 50]
+          ]
+        ])
+
+      assert_all_close(result, expected)
+
+      result = Nx.window_sum(t, {1, 2, 2}, strides: [2, 2, 2])
+
+      expected =
+        Nx.tensor([
+          [
+            [10, 18],
+            [42, 50]
+          ]
+        ])
+
+      assert_all_close(result, expected)
+    end
+
     test "works with non default options" do
-      t = Nx.tensor([[[4.0, 2.0, 3.0], [2.0, 5.0, 6.5]], [[1.2, 2.2, 3.2], [4.0, 5.0, 6.2]]])
+      t =
+        Nx.tensor([
+          [
+            [4.0, 2.0, 3.0],
+            [2.0, 5.0, 6.5]
+          ],
+          [
+            [1.2, 2.2, 3.2],
+            [4.0, 5.0, 6.2]
+          ]
+        ])
+
       result = Nx.window_sum(t, {2, 1, 1}, strides: [2, 1, 1], padding: [{1, 1}, {0, 0}, {1, 1}])
 
       assert_all_close(
@@ -1182,12 +1246,8 @@ defmodule EMLX.NxTest do
       )
     end
 
-    # strides are not supported yet
-    @tag :skip
     test "works with non default options" do
       t = Nx.tensor([[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]])
-
-      dbg(t)
 
       result =
         Nx.window_product(t, {2, 2, 1}, strides: [1, 2, 3], padding: [{0, 1}, {2, 0}, {1, 1}])
