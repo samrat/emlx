@@ -46,7 +46,7 @@ Nx.Defn.default_options(compiler: EMLX.Compiler)
 
 EMLX relies on the [MLX](https://github.com/ml-explore/mlx) library to function, and currently EMLX will download precompiled builds from [mlx-build](https://github.com/cocoa-xu/mlx-build).
 
-Compiling from source and using customized precompiled binaries will be supported soon.
+Compiling from source will be supported soon.
 
 #### Using precompiled binaries
 
