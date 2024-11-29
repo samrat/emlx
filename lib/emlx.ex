@@ -307,6 +307,10 @@ defmodule EMLX do
   defvalue deallocate(tensor_ref)
   defvalue eval(tensor)
 
+  def compile(list_of_tensors) do
+    EMLX.NIF.compile(list_of_tensors)
+  end
+
   deftensor slice(tensor, starts, stops, strides)
   deftensor slice_update(tensor, tensor_updates, starts, stops)
   deftensor squeeze(tensor, axes)
@@ -331,24 +335,28 @@ defmodule EMLX do
         raise ArgumentError, "EMLX can only be used with the EMLX backend, got: #{inspect(other)}"
     end
 
-    fun = __compile__(key, vars, fun, opts)
-
-    [result] = fun.(args_list)
-
-    Nx.Defn.Composite.traverse(result, fn
-      %Nx.Tensor{data: %EMLX.Backend{ref: {_device, ref}}} = node ->
-        :ok = eval(ref)
-        node
-
-      other ->
-        other
-    end)
-
-    [result]
+    __compile__(key, vars, fun, opts).(args_list)
   end
 
   @impl Nx.Defn.Compiler
-  defdelegate __compile__(key, vars, fun, opts), to: Nx.Defn.Evaluator
+  def __compile__(key, vars, fun, opts) do
+    evaled_fun = Nx.Defn.Evaluator.__compile__(key, vars, fun, opts)
+
+    fn arguments ->
+      result = evaled_fun.(arguments)
+
+      :ok =
+        result
+        |> Nx.Defn.Composite.flatten_list()
+        |> Enum.map(fn
+          %Nx.Tensor{data: %EMLX.Backend{ref: {_device, ref}}} ->
+            ref
+        end)
+        |> compile()
+
+      result
+    end
+  end
 
   @impl Nx.Defn.Compiler
   defdelegate __partitions_options__(opts), to: Nx.Defn.Evaluator

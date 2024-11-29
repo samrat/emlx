@@ -11,6 +11,8 @@ defmodule EMLX.NIF do
     end
   end
 
+  def compile(_list), do: :erlang.nif_error(:nif_not_loaded)
+
   @on_load :load_nifs
   def load_nifs do
     path = :filename.join(:code.priv_dir(:emlx), ~c"libemlx")

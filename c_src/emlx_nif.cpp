@@ -479,6 +479,23 @@ NIF(eval) {
   return nx::nif::ok(env);
 }
 
+std::vector<mlx::core::array> noop(const std::vector<mlx::core::array>& args) {
+  return args;
+}
+
+NIF(compile) {
+  LIST_PARAM(0, std::vector<mlx::core::array>, arrays);
+
+  // auto func = [&arrays](std::vector<mlx::core::array> args)
+  //     -> std::vector<mlx::core::array> { return arrays; };
+
+  auto compiled_fun = mlx::core::compile(noop);
+
+  mlx::core::eval(compiled_fun(arrays));
+
+  return nx::nif::ok(env);
+}
+
 NIF(stack) {
   LIST_PARAM(0, std::vector<mlx::core::array>, arrays);
   PARAM(1, int, axis);
@@ -918,6 +935,7 @@ static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
                                  {"as_strided", 5, as_strided},
                                  {"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},
+                                 {"compile", 1, compile},
                                  {"view", 3, view},
                                  {"stack", 3, stack},
                                  {"where", 4, where},
