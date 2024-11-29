@@ -39,7 +39,7 @@ Nx.default_backend({EMLX.Backend, device: :gpu})
 If desireable, you can also set the default compiler:
 
 ```elixir
-Nx.Defn.default_options(compiler: EMLX.Compiler)
+Nx.Defn.default_options(compiler: EMLX)
 ```
 
 ### MLX binaries
