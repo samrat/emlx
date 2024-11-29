@@ -336,7 +336,7 @@ defmodule EMLX do
     [result] = fun.(args_list)
 
     Nx.Defn.Composite.traverse(result, fn
-      %Nx.Tensor{data: %EMLX.Backend{ref: {_device, ref}}} = node ->
+      %Nx.Tensor{data: %EMLX.Backend{ref: ref}} = node ->
         :ok = eval(ref)
         node
 
