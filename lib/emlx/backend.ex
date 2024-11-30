@@ -1304,13 +1304,12 @@ defmodule EMLX.Backend do
       padded_mx = EMLX.pad(t_mx, Nx.axes(tensor), low_pad, high_pad, pad_mx)
 
       unfolded_mx =
-        padded_mx
-        |> sliding_window_view(
+        sliding_window_view(
+          padded_mx,
           EMLX.shape(padded_mx),
           window_dims_tuple,
           opts[:strides]
         )
-        |> EMLX.astype(to_mlx_type(out.type))
 
       unfolded_shape = EMLX.shape(unfolded_mx)
       unfolded = to_nx(unfolded_mx)
