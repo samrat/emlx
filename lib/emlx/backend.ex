@@ -1068,14 +1068,6 @@ defmodule EMLX.Backend do
       |> EMLX.astype(to_mlx_type(out.type))
       |> to_nx(out)
     end
-
-    # if asc? do
-    #   to_nx(t, out)
-    # else
-    #   t
-    #   |> to_nx(out)
-    #   |> Nx.reverse(axes: [axis])
-    # end
   end
 
   defp maybe_upcast(%T{type: t} = left, %T{type: t} = right),
