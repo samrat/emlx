@@ -21,7 +21,19 @@ defmodule EMLX.Backend do
   def from_nx(%T{} = other_backend), do: Nx.backend_transfer(other_backend, Backend) |> from_nx()
 
   @doc """
-  Converts an MLX array back to an Nx tensor.
+  Converts an MLX array to an Nx tensor.
+  """
+  def to_nx({device, ref} = device_ref)
+      when is_atom(device) and is_reference(ref) do
+    # Get the MLX array's type
+    mlx_type = EMLX.scalar_type(device_ref)
+    shape = EMLX.shape(device_ref)
+
+    to_nx(device_ref, Nx.template(shape, to_nx_type(mlx_type)))
+  end
+
+  @doc """
+  Converts an MLX array back to an Nx tensor with type and shape assertions.
   """
   def to_nx({device, ref} = device_ref, %T{type: type, shape: shape} = t)
       when is_atom(device) and is_reference(ref) do
@@ -1309,7 +1321,7 @@ defmodule EMLX.Backend do
         |> EMLX.astype(to_mlx_type(out.type))
 
       unfolded_shape = EMLX.shape(unfolded_mx)
-      unfolded = to_nx(unfolded_mx, %{tensor | shape: unfolded_shape})
+      unfolded = to_nx(unfolded_mx)
 
       {to_keep, to_flatten} =
         unfolded_shape
@@ -1352,6 +1364,7 @@ defmodule EMLX.Backend do
     |> Nx.broadcast(out.shape)
     |> Nx.indexed_add(indices, flat_source)
     |> Nx.as_type(out.type)
+    |> Nx.rename(out.names)
   end
 
   @impl true
