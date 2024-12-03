@@ -6,7 +6,12 @@ EMLX_LIB_DIR = $(PRIV_DIR)/mlx/lib
 
 # Build flags
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I$(MLX_INCLUDE_DIR) -Wall \
-         -std=c++17 -O3
+         -std=c++17
+ifeq ($(LIBMLX_ENABLE_DEBUG),true)
+		CFLAGS += -g
+else
+		CFLAGS += -O3
+endif
 
 LDFLAGS = -L$(MLX_LIB_DIR) -lmlx -shared
 
