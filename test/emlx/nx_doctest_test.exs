@@ -40,9 +40,6 @@ defmodule EMLX.Nx.DoctestTest do
     window_min: 3,
     window_product: 3,
     window_mean: 3,
-    # integer types not supported, and complex types not supported
-    # complex can use the definition Torchx uses
-    conv: 3,
     # missing support for inner padding
     pad: 3,
     # MLX sorts NaNs lowest, Nx sorts them highest

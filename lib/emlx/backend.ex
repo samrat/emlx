@@ -635,6 +635,27 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def conv(%T{type: {:c, _}}, input, kernel, opts) do
+    real_input = Nx.real(input)
+    imag_input = Nx.imag(input)
+    real_kernel = Nx.real(kernel)
+    imag_kernel = Nx.imag(kernel)
+
+    real_part =
+      Nx.subtract(
+        Nx.conv(real_input, real_kernel, opts),
+        Nx.conv(imag_input, imag_kernel, opts)
+      )
+
+    imag_part =
+      Nx.add(
+        Nx.conv(real_input, imag_kernel, opts),
+        Nx.conv(imag_input, real_kernel, opts)
+      )
+
+    Nx.complex(real_part, imag_part)
+  end
+
   def conv(out, input, kernel, opts) do
     input_permutation = opts[:input_permutation]
     kernel_permutation = opts[:kernel_permutation]
@@ -655,6 +676,7 @@ defmodule EMLX.Backend do
 
     input_mx =
       from_nx(input)
+      |> EMLX.astype(to_mlx_type(out.type))
       |> EMLX.transpose(input_permutation)
       |> EMLX.transpose(permute_channels_last)
 
@@ -663,6 +685,7 @@ defmodule EMLX.Backend do
 
     kernel_mx =
       from_nx(kernel)
+      |> EMLX.astype(to_mlx_type(out.type))
       |> EMLX.transpose(kernel_permutation)
       |> EMLX.transpose(permute_channels_last)
 
