@@ -636,6 +636,26 @@ defmodule EMLX.Backend do
 
   @impl true
   def conv(%T{type: {:c, _}}, input, kernel, opts) do
+    # MLX doesn't support complex inputs,
+    # so we rely on the fact that a convolution is effectively
+    # a sliding dot product. We can then decompose the dot product
+    # of a complex-valued pair of tensors into dot products involving
+    # their real and imaginary components.
+
+    # For example, given a tensor v = [a1+b1i c1+d1i] and a
+    # kernel k = [a2+b2i c2+d2i], we can expand the dot product into
+    # (a1+b1i)(a2+b2i) + (c1+d1i)(c2+d2i)
+    # = (a1a2 - b1b2) + (a1b2+a2b1)i + (c1c2 - d1d2) + (c1d2+c2d1)i
+    # = (a1a2 + c1c2) - (b1b2 + d1d2) + i[(a1b2 + c1d2) + (a2b1  + c2d1)]
+    # = ([a1 c1].[a2 c2] - [b1 d1].[b2 d2]) + i([a1 c1].[b2 d2] + [a2 c2].[b1 d1])
+    # = (real(v).real(k) - imag(v).imag(k)) + i(real(v).imag(k) + imag(v).real(k))
+
+    # With the result above, we can turn z = conv(t, k) where either t or k are complex
+    # into:
+    # real_part = conv(real(t), real(k)) - conv(imag(t), imag(k))
+    # imag_part = conv(real(t), imag(k)) + conv(imag(t), real(k))
+    # z = complex(real_part, imag_part)
+
     real_input = Nx.real(input)
     imag_input = Nx.imag(input)
     real_kernel = Nx.real(kernel)
