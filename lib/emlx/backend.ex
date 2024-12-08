@@ -272,8 +272,12 @@ defmodule EMLX.Backend do
     {axes, low_pad_size, high_pad_size} =
       input_config
       |> Enum.with_index()
-      |> Enum.reduce({[], [], []}, fn {{low, high, _}, i}, {axes, lows, highs} ->
-        {[i | axes], [max(low, 0) | lows], [max(high, 0) | highs]}
+      |> Enum.reduce({[], [], []}, fn
+        {{low, high, 0}, i}, {axes, lows, highs} ->
+          {[i | axes], [max(low, 0) | lows], [max(high, 0) | highs]}
+
+        _, _ ->
+          raise "Interior padding not supported in EMLX yet"
       end)
 
     pad_value =
@@ -635,6 +639,47 @@ defmodule EMLX.Backend do
   end
 
   @impl true
+  def conv(%T{type: {:c, _}}, input, kernel, opts) do
+    # MLX doesn't support complex inputs,
+    # so we rely on the fact that a convolution is effectively
+    # a sliding dot product. We can then decompose the dot product
+    # of a complex-valued pair of tensors into dot products involving
+    # their real and imaginary components.
+
+    # For example, given a tensor v = [a1+b1i c1+d1i] and a
+    # kernel k = [a2+b2i c2+d2i], we can expand the dot product into
+    # (a1+b1i)(a2+b2i) + (c1+d1i)(c2+d2i)
+    # = (a1a2 - b1b2) + (a1b2+a2b1)i + (c1c2 - d1d2) + (c1d2+c2d1)i
+    # = (a1a2 + c1c2) - (b1b2 + d1d2) + i[(a1b2 + c1d2) + (a2b1  + c2d1)]
+    # = ([a1 c1].[a2 c2] - [b1 d1].[b2 d2]) + i([a1 c1].[b2 d2] + [a2 c2].[b1 d1])
+    # = (real(v).real(k) - imag(v).imag(k)) + i(real(v).imag(k) + imag(v).real(k))
+
+    # With the result above, we can turn z = conv(t, k) where either t or k are complex
+    # into:
+    # real_part = conv(real(t), real(k)) - conv(imag(t), imag(k))
+    # imag_part = conv(real(t), imag(k)) + conv(imag(t), real(k))
+    # z = complex(real_part, imag_part)
+
+    real_input = Nx.real(input)
+    imag_input = Nx.imag(input)
+    real_kernel = Nx.real(kernel)
+    imag_kernel = Nx.imag(kernel)
+
+    real_part =
+      Nx.subtract(
+        Nx.conv(real_input, real_kernel, opts),
+        Nx.conv(imag_input, imag_kernel, opts)
+      )
+
+    imag_part =
+      Nx.add(
+        Nx.conv(real_input, imag_kernel, opts),
+        Nx.conv(imag_input, real_kernel, opts)
+      )
+
+    Nx.complex(real_part, imag_part)
+  end
+
   def conv(out, input, kernel, opts) do
     input_permutation = opts[:input_permutation]
     kernel_permutation = opts[:kernel_permutation]
@@ -655,6 +700,7 @@ defmodule EMLX.Backend do
 
     input_mx =
       from_nx(input)
+      |> EMLX.astype(to_mlx_type(out.type))
       |> EMLX.transpose(input_permutation)
       |> EMLX.transpose(permute_channels_last)
 
@@ -663,6 +709,7 @@ defmodule EMLX.Backend do
 
     kernel_mx =
       from_nx(kernel)
+      |> EMLX.astype(to_mlx_type(out.type))
       |> EMLX.transpose(kernel_permutation)
       |> EMLX.transpose(permute_channels_last)
 

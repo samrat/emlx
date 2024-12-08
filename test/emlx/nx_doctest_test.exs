@@ -6,11 +6,6 @@ defmodule EMLX.Nx.DoctestTest do
     :ok
   end
 
-  @not_implemented_yet [
-    # not supported yet
-    reverse: 2
-  ]
-
   @rounding_error [
     erfc: 1,
     expm1: 1,
@@ -40,9 +35,6 @@ defmodule EMLX.Nx.DoctestTest do
     window_min: 3,
     window_product: 3,
     window_mean: 3,
-    # integer types not supported, and complex types not supported
-    # complex can use the definition Torchx uses
-    conv: 3,
     # missing support for inner padding
     pad: 3,
     # MLX sorts NaNs lowest, Nx sorts them highest
@@ -62,5 +54,5 @@ defmodule EMLX.Nx.DoctestTest do
     sort: 2
   ]
 
-  doctest Nx, except: @not_implemented_yet ++ @rounding_error ++ @not_supported ++ @to_be_fixed
+  doctest Nx, except: @rounding_error ++ @not_supported ++ @to_be_fixed
 end
