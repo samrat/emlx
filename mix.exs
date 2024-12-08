@@ -18,15 +18,27 @@ defmodule EMLX.MixProject do
 
       # elixir_make
       make_env: %{
-        "MLX_INCLUDE_DIR" => Path.join(libmlx_config.dir, "include"),
-        "MLX_LIB_DIR" => Path.join(libmlx_config.dir, "lib"),
+        "MLX_DIR" => libmlx_config.dir,
+        "MLX_VERSION" => libmlx_config.version,
+        "MLX_BUILD" => to_string(libmlx_config.features.build?),
+        "MLX_INCLUDE_DIR" =>
+          Path.join(
+            libmlx_config.dir,
+            if(libmlx_config.features.build?, do: "usr/include", else: "include")
+          ),
+        "MLX_LIB_DIR" =>
+          Path.join(
+            libmlx_config.dir,
+            if(libmlx_config.features.build?, do: "usr/lib", else: "lib")
+          ),
         "MLX_VARIANT" => libmlx_config.variant,
+        "EMLX_CACHE_DIR" => libmlx_config.cache_dir,
         "EMLX_VERSION" => @version,
         "MIX_BUILD_EMBEDDED" => "#{Mix.Project.config()[:build_embedded]}"
       },
 
       # Compilers
-      compilers: [:mlx, :elixir_make] ++ Mix.compilers(),
+      compilers: compilers(libmlx_config),
       aliases: aliases()
     ]
   end
@@ -53,20 +65,40 @@ defmodule EMLX.MixProject do
     ]
   end
 
+  defp compilers(libmlx_config) do
+    compilers = [:elixir_make] ++ Mix.compilers()
+
+    unless libmlx_config.features.build? do
+      [:mlx] ++ compilers
+    else
+      compilers
+    end
+  end
+
   defp libmlx_config() do
     version = System.get_env("LIBMLX_VERSION", @mlx_version)
 
     features = %{
       jit?: to_boolean(System.get_env("LIBMLX_ENABLE_JIT")),
-      debug?: to_boolean(System.get_env("LIBMLX_ENABLE_DEBUG"))
+      debug?: to_boolean(System.get_env("LIBMLX_ENABLE_DEBUG")),
+      build?: to_boolean(System.get_env("LIBMLX_BUILD"))
     }
 
     variant = to_variant(features)
 
+    cache_dir =
+      if dir = System.get_env("LIBMLX_CACHE") do
+        Path.expand(dir)
+      else
+        :filename.basedir(:user_cache, "libmlx")
+      end
+
     %{
       version: version,
-      dir: Path.join(__DIR__, "cache/libmlx-#{version}#{variant}"),
-      variant: variant
+      dir: Path.join(cache_dir, "libmlx-#{version}#{variant}"),
+      features: features,
+      variant: variant,
+      cache_dir: cache_dir
     }
   end
 
@@ -81,7 +113,11 @@ defmodule EMLX.MixProject do
   end
 
   defp to_variant(features) do
-    [if(features.debug?, do: "debug", else: nil), if(features.jit?, do: "jit", else: nil)]
+    [
+      if(features.build?, do: "build", else: nil),
+      if(features.debug?, do: "debug", else: nil),
+      if(features.jit?, do: "jit", else: nil)
+    ]
     |> Enum.filter(&(&1 != nil))
     |> Enum.sort()
     |> Enum.map(&"-#{&1}")
@@ -91,22 +127,15 @@ defmodule EMLX.MixProject do
   defp download_and_unarchive(args) do
     libmlx_config = libmlx_config()
 
-    cache_dir =
-      if dir = System.get_env("LIBMLX_CACHE") do
-        Path.expand(dir)
-      else
-        :filename.basedir(:user_cache, "libmlx")
-      end
-
     if "--force" in args do
       File.rm_rf(libmlx_config.dir)
-      File.rm_rf(cache_dir)
+      File.rm_rf(libmlx_config.cache_dir)
     end
 
     if File.dir?(libmlx_config.dir) do
       {:ok, []}
     else
-      download_and_unarchive(cache_dir, libmlx_config)
+      download_and_unarchive(libmlx_config.cache_dir, libmlx_config)
     end
   end
 
