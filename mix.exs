@@ -3,7 +3,7 @@ defmodule EMLX.MixProject do
 
   @app :emlx
   @version "0.1.0"
-  @mlx_version "0.21.0"
+  @mlx_version "0.21.1"
 
   def project do
     libmlx_config = libmlx_config()
