@@ -8,16 +8,15 @@ on:
 
 jobs:
   macos:
-    name: macOS (${{ matrix.elixir }}, ${{ matrix.otp }})
+    name: macOS (${{ matrix.job.elixir }}, ${{ matrix.job.otp }})
     runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
-        elixir: ["1.15.4", "1.16.2"]
-        otp: ["25.3.2.15"]
-        include:
-          - elixir: "1.16.2"
-            lint: true
+        job:
+          - { otp: "25.3.2.15", elixir: "1.15.4" }
+          - { otp: "25.3.2.15", elixir: "1.16.2", lint: true }
+          - { otp: "25.3.2.15", elixir: "1.16.2", build: true }
     env:
       MIX_ENV: test
     steps:
@@ -28,12 +27,12 @@ jobs:
         id: setup
         run: |
           curl -fsSO https://elixir-lang.org/install.sh
-          sh install.sh elixir@${{ matrix.elixir }} otp@${{ matrix.otp }}
+          sh install.sh elixir@${{ matrix.job.elixir }} otp@${{ matrix.job.otp }}
 
-          OTP_VERSION="${{ matrix.otp }}"
+          OTP_VERSION="${{ matrix.job.otp }}"
           OTP_MAJOR="${OTP_VERSION%%.*}"
           export OTP_PATH=$HOME/.elixir-install/installs/otp/${OTP_VERSION}/bin
-          export ELIXIR_PATH=$HOME/.elixir-install/installs/elixir/${{ matrix.elixir }}-otp-${OTP_MAJOR}/bin
+          export ELIXIR_PATH=$HOME/.elixir-install/installs/elixir/${{ matrix.job.elixir }}-otp-${OTP_MAJOR}/bin
 
           echo "path=${OTP_PATH}:${ELIXIR_PATH}" >> $GITHUB_OUTPUT
           echo "${OTP_PATH}" >> $GITHUB_PATH
@@ -51,7 +50,7 @@ jobs:
         id: mix-cache # id to use in retrieve action
         with:
           path: ${{ github.workspace }}/deps
-          key: ${{ runner.os }}-Elixir-v${{ matrix.elixir }}-OTP-${{ matrix.otp }}-${{ hashFiles(format('{0}/mix.lock', github.workspace)) }}-v1
+          key: ${{ runner.os }}-Elixir-v${{ matrix.job.elixir }}-OTP-${{ matrix.job.otp }}-${{ hashFiles(format('{0}/mix.lock', github.workspace)) }}-v1
 
       - name: Install dependencies
         if: ${{ steps.mix-cache.outputs.cache-hit != 'true' }}
@@ -62,12 +61,18 @@ jobs:
       - name: Compile and check warnings
         run: |
           export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          if [ ${{ matrix.job.build }} = "true" ]; then
+            export LIBMLX_BUILD=true
+          fi
           mix compile --warnings-as-errors
 
       - name: Check formatting
-        if: ${{ matrix.lint }}
+        if: ${{ matrix.job.lint }}
         run: |
           export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          if [ ${{ matrix.job.build }} = "true" ]; then
+            export LIBMLX_BUILD=true
+          fi
           mix format --check-formatted
 
       - name: Run epmd for distributed tests
@@ -78,4 +83,7 @@ jobs:
       - name: Run tests
         run: |
           export PATH="${{ steps.setup.outputs.path }}:${PATH}"
+          if [ ${{ matrix.job.build }} = "true" ]; then
+            export LIBMLX_BUILD=true
+          fi
           mix test --warnings-as-errors

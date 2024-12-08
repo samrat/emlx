@@ -46,8 +46,6 @@ Nx.Defn.default_options(compiler: EMLX)
 
 EMLX relies on the [MLX](https://github.com/ml-explore/mlx) library to function, and currently EMLX will download precompiled builds from [mlx-build](https://github.com/cocoa-xu/mlx-build).
 
-Compiling from source will be supported soon.
-
 #### Using precompiled binaries
 
 While the default configuration should be suitable for most cases, there is however a number of environment variables that you may want to use in order to customize the variant of MLX binary.
@@ -73,3 +71,9 @@ Enhance metal debug workflow by enabling debug information in the Metal shaders 
 ##### `LIBMLX_CACHE`
 
 The directory to store the downloaded and built archives in. Defaults to the standard cache location for the given operating system.
+
+#### Compiling from source
+
+If you want to compile MLX from source, you can do so by setting the `LIBMLX_BUILD` environment variable to `true`.
+
+Environment variables listed in the previous section will still apply.
