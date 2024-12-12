@@ -34,7 +34,8 @@ defmodule EMLX.MixProject do
         "MLX_VARIANT" => libmlx_config.variant,
         "EMLX_CACHE_DIR" => libmlx_config.cache_dir,
         "EMLX_VERSION" => @version,
-        "MIX_BUILD_EMBEDDED" => "#{Mix.Project.config()[:build_embedded]}"
+        "MIX_BUILD_EMBEDDED" => "#{Mix.Project.config()[:build_embedded]}",
+        "LIBMLX_ENABLE_DEBUG" => to_string(libmlx_config.features.debug?)
       },
 
       # Compilers
@@ -45,6 +46,7 @@ defmodule EMLX.MixProject do
 
   def application do
     [
+      mod: {EMLX.Application, []},
       extra_applications: [:logger, :inets, :ssl, :public_key, :crypto]
     ]
   end
@@ -55,7 +57,8 @@ defmodule EMLX.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.6"},
-      {:nx, "~> 0.9.2"}
+      {:nx, "~> 0.9.2"},
+      {:nif_call, "~> 0.1.0"}
     ]
   end
 

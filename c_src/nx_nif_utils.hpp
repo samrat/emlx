@@ -1,8 +1,16 @@
 #pragma once
 
 #include "erl_nif.h"
+#include "mlx/mlx.h"
 
 ErlNifResourceType *TENSOR_TYPE;
+ErlNifResourceType *FUNCTION_TYPE;
+
+namespace emlx {
+typedef std::function<std::vector<mlx::core::array>(
+    const std::vector<mlx::core::array> &)>
+    function;
+}
 
 #define GET(ARGN, VAR)                                                         \
   if (!nx::nif::get(env, argv[ARGN], &VAR))                                    \
@@ -62,6 +70,50 @@ ErlNifResourceType *TENSOR_TYPE;
       return nx::nif::error(env, "Unable to get scalar parameter");            \
     VAR = static_cast<double>(int64_##VAR);                                    \
   }
+
+// Template struct for resources. The struct lets us use templates
+// to store and retrieve open resources later on. This implementation
+// is the same as the approach taken in the goertzenator/nifpp
+// C++11 wrapper around the Erlang NIF API.
+template <typename T> struct resource_object {
+  static ErlNifResourceType *type;
+};
+
+template <typename T> ErlNifResourceType *resource_object<T>::type = 0;
+
+// Default destructor passed when opening a resource. The default
+// behavior is to invoke the underlying objects destructor and
+// set the resource pointer to NULL.
+template <typename T> void default_dtor(ErlNifEnv *env, void *obj) {
+  T *resource = reinterpret_cast<T *>(obj);
+  resource->~T();
+  resource = nullptr;
+}
+
+// Opens a resource for the given template type T. If no
+// destructor is given, uses the default destructor defined
+// above.
+template <typename T>
+int open_resource(ErlNifEnv *env, const char *mod, const char *name,
+                  ErlNifResourceDtor *dtor = nullptr) {
+  if (dtor == nullptr) {
+    dtor = &default_dtor<T>;
+  }
+  ErlNifResourceType *type;
+  ErlNifResourceFlags flags =
+      ErlNifResourceFlags(ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER);
+  type = enif_open_resource_type(env, mod, name, dtor, flags, NULL);
+  if (type == NULL) {
+    resource_object<T>::type = 0;
+    return -1;
+  } else {
+    resource_object<T>::type = type;
+  }
+  return 1;
+}
+
+ERL_NIF_TERM create_tensor_resource(ErlNifEnv *env, mlx::core::array tensor);
+ERL_NIF_TERM create_function_resource(ErlNifEnv *env, emlx::function function);
 
 namespace nx {
 namespace nif {
@@ -177,6 +229,21 @@ ERL_NIF_TERM make_list(ErlNifEnv *env, std::vector<size_t> result) {
   return list;
 }
 
+ERL_NIF_TERM make_list(ErlNifEnv *env, std::vector<mlx::core::array> result) {
+  size_t n = result.size();
+
+  std::vector<ERL_NIF_TERM> nif_terms;
+  nif_terms.reserve(n);
+
+  for (size_t i = 0; i < n; i++) {
+    nif_terms[i] = create_tensor_resource(env, result[i]);
+  }
+
+  auto data = nif_terms.data();
+  auto list = enif_make_list_from_array(env, &data[0], n);
+  return list;
+}
+
 // Atoms
 
 int get_atom(ErlNifEnv *env, ERL_NIF_TERM term, std::string &var) {
@@ -216,6 +283,13 @@ int get(ErlNifEnv *env, ERL_NIF_TERM term, bool *var) {
   return 1;
 }
 
+// function
+
+int get(ErlNifEnv *env, ERL_NIF_TERM term, emlx::function *&var) {
+  return enif_get_resource(env, term, resource_object<emlx::function>::type,
+                           reinterpret_cast<void **>(&var));
+}
+
 // Containers
 
 template <typename T = int64_t>
@@ -245,7 +319,7 @@ int get_list(ErlNifEnv *env, ERL_NIF_TERM list,
 
   while (enif_get_list_cell(env, list, &head, &tail)) {
     mlx::core::array *elem;
-    if (!enif_get_resource(env, head, TENSOR_TYPE,
+    if (!enif_get_resource(env, head, resource_object<mlx::core::array>::type,
                            reinterpret_cast<void **>(&elem))) {
       return 0;
     }
