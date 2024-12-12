@@ -506,22 +506,48 @@ NIF(eval) {
   return nx::nif::ok(env);
 }
 
+NIF(set_compile) {
+  PARAM(0, bool, compile);
+
+  if (compile) {
+    mlx::core::enable_compile();
+  } else {
+    mlx::core::disable_compile();
+  }
+
+  return nx::nif::ok(env);
+}
+
+void move_between_envs(ERL_NIF_TERM from_term, ERL_NIF_TERM *to_term,
+                       ErlNifEnv *from_env, ErlNifEnv *to_env) {
+  ErlNifBinary serialized;
+  enif_term_to_binary(from_env, from_term, &serialized);
+  enif_binary_to_term(to_env, serialized.data, serialized.size, to_term, 0);
+}
+
 NIF(compile) {
-  ERL_NIF_TERM callback_fun = argv[0];
+  ERL_NIF_TERM callback_fun_outer = argv[0];
   LIST_PARAM(1, std::vector<mlx::core::array>, arrays);
   ErlNifPid evaluator_pid;
   if (!enif_get_local_pid(env, argv[2], &evaluator_pid)) {
     return nx::nif::error(env, "Could not get evaluator pid");
   }
 
-  auto fun = [env, evaluator_pid,
-              callback_fun](const std::vector<mlx::core::array> &compile_args) {
-    ERL_NIF_TERM tensor_list = nx::nif::make_list(env, compile_args);
+  auto fun = [evaluator_pid, env, callback_fun_outer](
+                 const std::vector<mlx::core::array> &compile_args) {
+    ErlNifEnv *closure_env = enif_alloc_env();
+    ERL_NIF_TERM callback_fun;
+    move_between_envs(callback_fun_outer, &callback_fun, env, closure_env);
+    ERL_NIF_TERM tensor_list = nx::nif::make_list(closure_env, compile_args);
+    ERL_NIF_TERM arg_list = enif_make_list1(closure_env, tensor_list);
+
     ERL_NIF_TERM output_list =
-        make_nif_call(env, evaluator_pid, callback_fun, tensor_list);
+        make_nif_call(closure_env, evaluator_pid, callback_fun, arg_list);
 
     std::vector<mlx::core::array> output_tensors;
-    nx::nif::get_list(env, output_list, output_tensors);
+    nx::nif::get_list(closure_env, output_list, output_tensors);
+
+    enif_free_env(closure_env);
 
     return output_tensors;
   };
@@ -973,126 +999,128 @@ NIF(as_strided) {
   TENSOR(mlx::core::as_strided(*t, shape, strides, offset, device));
 }
 
-static ErlNifFunc nif_funcs[] = {NIF_CALL_NIF_FUNC(nif_call_evaluated),
-                                 {"strides", 1, strides},
-                                 {"as_strided", 5, as_strided},
-                                 {"scalar_type", 1, scalar_type},
-                                 {"eval", 1, eval},
-                                 {"view", 3, view},
-                                 {"stack", 3, stack},
-                                 {"where", 4, where},
-                                 {"concatenate", 3, concatenate},
-                                 {"take_along_axis", 4, take_along_axis},
-                                 {"take", 4, take},
-                                 {"gather", 5, gather},
-                                 {"scatter_add", 5, scatter_add},
-                                 {"scatter", 5, scatter},
-                                 {"slice", 5, slice},
-                                 {"slice_update", 5, slice_update},
-                                 {"squeeze", 3, squeeze},
-                                 {"item", 1, item},
-                                 {"all", 4, all},
-                                 {"any", 4, any},
-                                 {"sum", 4, sum},
-                                 {"product", 4, product},
-                                 {"argmax", 3, argmax},
-                                 {"argmax", 4, argmax},
-                                 {"argmin", 3, argmin},
-                                 {"argmin", 4, argmin},
-                                 {"cumulative_sum", 5, cumulative_sum},
-                                 {"cumulative_product", 5, cumulative_product},
-                                 {"cumulative_max", 5, cumulative_max},
-                                 {"cumulative_min", 5, cumulative_min},
-                                 {"shape", 1, shape},
-                                 {"reshape", 3, reshape},
-                                 {"astype", 3, astype},
-                                 {"to_blob", 1, to_blob},
-                                 {"to_blob", 2, to_blob},
-                                 {"from_blob", 4, from_blob},
-                                 {"scalar_tensor", 3, scalar_tensor},
-                                 {"ones", 3, ones},
-                                 {"full", 4, full},
-                                 {"arange", 5, arange},
-                                 {"eye", 4, eye},
-                                 {"broadcast_to", 3, broadcast_to},
-                                 {"tensordot", 5, tensordot},
-                                 {"einsum", 4, einsum},
-                                 {"conv_general", 9, conv_general},
-                                 {"transpose", 3, transpose},
-                                 {"pad", 6, pad},
-                                 {"sort", 3, sort},
-                                 {"argsort", 3, argsort},
-                                 {"abs", 2, abs},
-                                 {"ceil", 2, ceil},
-                                 {"conjugate", 2, conjugate},
-                                 {"floor", 2, floor},
-                                 {"negate", 2, negate},
-                                 {"round", 2, round},
-                                 {"sign", 2, sign},
-                                 {"real", 2, real},
-                                 {"imag", 2, imag},
-                                 {"is_nan", 2, is_nan},
-                                 {"is_infinity", 2, is_infinity},
-                                 {"logical_not", 2, logical_not},
-                                 {"sigmoid", 2, sigmoid},
-                                 {"asin", 2, asin},
-                                 {"asinh", 2, asinh},
-                                 {"acos", 2, acos},
-                                 {"acosh", 2, acosh},
-                                 {"cos", 2, cos},
-                                 {"cosh", 2, cosh},
-                                 {"atan", 2, atan},
-                                 {"atanh", 2, atanh},
-                                 {"erf", 2, erf},
-                                 {"erf_inv", 2, erf_inv},
-                                 {"exp", 2, exp},
-                                 {"expm1", 2, expm1},
-                                 {"log", 2, log},
-                                 {"log1p", 2, log1p},
-                                 {"rsqrt", 2, rsqrt},
-                                 {"sin", 2, sin},
-                                 {"sinh", 2, sinh},
-                                 {"sqrt", 2, sqrt},
-                                 {"tan", 2, tan},
-                                 {"tanh", 2, tanh},
-                                 {"add", 3, add},
-                                 {"subtract", 3, subtract},
-                                 {"multiply", 3, multiply},
-                                 {"pow", 3, pow},
-                                 {"remainder", 3, remainder},
-                                 {"divide", 3, divide},
-                                 {"atan2", 3, atan2},
-                                 {"bitwise_and", 3, bitwise_and},
-                                 {"bitwise_or", 3, bitwise_or},
-                                 {"bitwise_xor", 3, bitwise_xor},
-                                 {"bitwise_not", 2, bitwise_not},
-                                 {"left_shift", 3, left_shift},
-                                 {"right_shift", 3, right_shift},
-                                 {"minimum", 3, minimum},
-                                 {"maximum", 3, maximum},
-                                 {"quotient", 3, quotient},
-                                 {"equal", 3, equal},
-                                 {"not_equal", 3, not_equal},
-                                 {"greater", 3, greater},
-                                 {"less", 3, less},
-                                 {"greater_equal", 3, greater_equal},
-                                 {"less_equal", 3, less_equal},
-                                 {"logical_and", 3, logical_and},
-                                 {"logical_or", 3, logical_or},
-                                 {"logical_xor", 3, logical_xor},
-                                 {"fft", 4, emlx_fft},
-                                 {"ifft", 4, ifft},
-                                 {"fft2", 4, emlx_fft2},
-                                 {"ifft2", 4, ifft2},
-                                 {"allclose", 6, allclose},
-                                 {"isclose", 6, isclose},
-                                 {"deallocate", 1, deallocate},
-                                 {"max", 4, max},
-                                 {"min", 4, min},
-                                 {"clip", 4, clip},
-                                 {"tri_inv", 3, tri_inv},
-                                 {"compile", 3, compile},
-                                 {"call_compiled", 2, call_compiled}};
+static ErlNifFunc nif_funcs[] = {
+    NIF_CALL_NIF_FUNC(nif_call_evaluated),
+    {"strides", 1, strides},
+    {"as_strided", 5, as_strided},
+    {"scalar_type", 1, scalar_type},
+    {"eval", 1, eval},
+    {"view", 3, view},
+    {"stack", 3, stack},
+    {"where", 4, where},
+    {"concatenate", 3, concatenate},
+    {"take_along_axis", 4, take_along_axis},
+    {"take", 4, take},
+    {"gather", 5, gather},
+    {"scatter_add", 5, scatter_add},
+    {"scatter", 5, scatter},
+    {"slice", 5, slice},
+    {"slice_update", 5, slice_update},
+    {"squeeze", 3, squeeze},
+    {"item", 1, item},
+    {"all", 4, all},
+    {"any", 4, any},
+    {"sum", 4, sum},
+    {"product", 4, product},
+    {"argmax", 3, argmax},
+    {"argmax", 4, argmax},
+    {"argmin", 3, argmin},
+    {"argmin", 4, argmin},
+    {"cumulative_sum", 5, cumulative_sum},
+    {"cumulative_product", 5, cumulative_product},
+    {"cumulative_max", 5, cumulative_max},
+    {"cumulative_min", 5, cumulative_min},
+    {"shape", 1, shape},
+    {"reshape", 3, reshape},
+    {"astype", 3, astype},
+    {"to_blob", 1, to_blob},
+    {"to_blob", 2, to_blob},
+    {"from_blob", 4, from_blob},
+    {"scalar_tensor", 3, scalar_tensor},
+    {"ones", 3, ones},
+    {"full", 4, full},
+    {"arange", 5, arange},
+    {"eye", 4, eye},
+    {"broadcast_to", 3, broadcast_to},
+    {"tensordot", 5, tensordot},
+    {"einsum", 4, einsum},
+    {"conv_general", 9, conv_general},
+    {"transpose", 3, transpose},
+    {"pad", 6, pad},
+    {"sort", 3, sort},
+    {"argsort", 3, argsort},
+    {"abs", 2, abs},
+    {"ceil", 2, ceil},
+    {"conjugate", 2, conjugate},
+    {"floor", 2, floor},
+    {"negate", 2, negate},
+    {"round", 2, round},
+    {"sign", 2, sign},
+    {"real", 2, real},
+    {"imag", 2, imag},
+    {"is_nan", 2, is_nan},
+    {"is_infinity", 2, is_infinity},
+    {"logical_not", 2, logical_not},
+    {"sigmoid", 2, sigmoid},
+    {"asin", 2, asin},
+    {"asinh", 2, asinh},
+    {"acos", 2, acos},
+    {"acosh", 2, acosh},
+    {"cos", 2, cos},
+    {"cosh", 2, cosh},
+    {"atan", 2, atan},
+    {"atanh", 2, atanh},
+    {"erf", 2, erf},
+    {"erf_inv", 2, erf_inv},
+    {"exp", 2, exp},
+    {"expm1", 2, expm1},
+    {"log", 2, log},
+    {"log1p", 2, log1p},
+    {"rsqrt", 2, rsqrt},
+    {"sin", 2, sin},
+    {"sinh", 2, sinh},
+    {"sqrt", 2, sqrt},
+    {"tan", 2, tan},
+    {"tanh", 2, tanh},
+    {"add", 3, add},
+    {"subtract", 3, subtract},
+    {"multiply", 3, multiply},
+    {"pow", 3, pow},
+    {"remainder", 3, remainder},
+    {"divide", 3, divide},
+    {"atan2", 3, atan2},
+    {"bitwise_and", 3, bitwise_and},
+    {"bitwise_or", 3, bitwise_or},
+    {"bitwise_xor", 3, bitwise_xor},
+    {"bitwise_not", 2, bitwise_not},
+    {"left_shift", 3, left_shift},
+    {"right_shift", 3, right_shift},
+    {"minimum", 3, minimum},
+    {"maximum", 3, maximum},
+    {"quotient", 3, quotient},
+    {"equal", 3, equal},
+    {"not_equal", 3, not_equal},
+    {"greater", 3, greater},
+    {"less", 3, less},
+    {"greater_equal", 3, greater_equal},
+    {"less_equal", 3, less_equal},
+    {"logical_and", 3, logical_and},
+    {"logical_or", 3, logical_or},
+    {"logical_xor", 3, logical_xor},
+    {"fft", 4, emlx_fft},
+    {"ifft", 4, ifft},
+    {"fft2", 4, emlx_fft2},
+    {"ifft2", 4, ifft2},
+    {"allclose", 6, allclose},
+    {"isclose", 6, isclose},
+    {"deallocate", 1, deallocate},
+    {"max", 4, max},
+    {"min", 4, min},
+    {"clip", 4, clip},
+    {"tri_inv", 3, tri_inv},
+    {"set_compile", 1, set_compile},
+    {"compile", 3, compile, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"call_compiled", 2, call_compiled, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 // Update the NIF initialization
 ERL_NIF_INIT(Elixir.EMLX.NIF, nif_funcs, load, NULL, NULL, NULL)

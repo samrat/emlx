@@ -23,6 +23,10 @@ defmodule EMLX.NIF do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def set_compile(_bool) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def call_compiled(_compiled_fun, _args) do
     :erlang.nif_error(:nif_not_loaded)
   end

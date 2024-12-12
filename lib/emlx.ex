@@ -305,6 +305,7 @@ defmodule EMLX do
   defp merge_device(_, _), do: :cpu
 
   defvalue deallocate(tensor_ref)
+
   defvalue eval(tensor)
 
   deftensor slice(tensor, starts, stops, strides)
@@ -333,16 +334,17 @@ defmodule EMLX do
 
     fun = __compile__(key, vars, fun, opts)
 
+    dbg(args_list)
     [result] = fun.(args_list)
 
-    Nx.Defn.Composite.traverse(result, fn
-      %Nx.Tensor{data: %EMLX.Backend{ref: ref}} = node ->
-        :ok = eval(ref)
-        node
+    # Nx.Defn.Composite.traverse(result, fn
+    #   %Nx.Tensor{data: %EMLX.Backend{ref: ref}} = node ->
+    #     # :ok = eval(ref)
+    #     node
 
-      other ->
-        other
-    end)
+    #   other ->
+    #     other
+    # end)
 
     [result]
   end
@@ -350,31 +352,52 @@ defmodule EMLX do
   @impl Nx.Defn.Compiler
   def __compile__(key, vars, fun, opts) do
     fn [args] ->
-      nif_args =
-        args
-        |> Nx.Defn.Composite.flatten_list()
-        |> Enum.map(& &1.data.ref)
+      {devices, nif_args} =
+        Enum.map(args, fn arg ->
+          case arg.() do
+            %Nx.Tensor{data: %EMLX.Backend{ref: {device, ref}}} -> {device, ref}
+            other -> {nil, Nx.to_tensor(other)}
+          end
+        end)
+        |> Enum.unzip()
+
+      dbg(nif_args)
+
+      device =
+        Enum.reduce_while(devices, :cpu, fn
+          :gpu, _ ->
+            {:halt, :gpu}
+
+          _, acc ->
+            {:cont, acc}
+        end)
 
       evaluator_pid = Process.whereis(EMLX.NIF.CallEvaluator)
 
-      dbg("before eval_fun")
+      if not Process.alive?(evaluator_pid) do
+        raise "EMLX.NIF.CallEvaluator not alive"
+      end
+
       eval_fun = Nx.Defn.Evaluator.__compile__(key, vars, fun, opts)
 
       # TODO: cache compiled_fun
-      dbg("before compile")
+
+      EMLX.NIF.set_compile(true)
 
       compiled_fun =
         EMLX.NIF.compile(
           fn args ->
-            args = Enum.map(args, &EMLX.Backend.to_nx/1)
+            args = Enum.map(args, fn ref -> fn -> EMLX.Backend.to_nx({device, ref}) end end)
             eval_fun.([args])
           end,
           nif_args,
           evaluator_pid
         )
+        |> unwrap!()
 
-      dbg("before call_compiled")
-      EMLX.NIF.call_compiled(compiled_fun, nif_args) |> dbg()
+      EMLX.NIF.set_compile(false)
+
+      EMLX.NIF.call_compiled(compiled_fun, nif_args) |> unwrap!() |> dbg()
     end
   end
 
