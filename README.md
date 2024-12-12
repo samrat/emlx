@@ -36,7 +36,10 @@ Nx.default_backend({EMLX.Backend, device: :cpu})
 Nx.default_backend({EMLX.Backend, device: :gpu})
 ```
 
-If desireable, you can also set the default compiler:
+If you want to use the JIT compiler, you can set the default compiler as shown below.
+
+Currently, the underlying implementation is not totally safe and could lead to a deadlocked dirty NIF, so this must be used with care.
+Defaulting to Nx.Defn.Evaluator is the safest option for now.
 
 ```elixir
 Nx.Defn.default_options(compiler: EMLX)
