@@ -18,4 +18,12 @@ defmodule EMLX.NIF do
     path = :filename.join(:code.priv_dir(:emlx), ~c"libemlx")
     :erlang.load_nif(path, 0)
   end
+
+  def compile(_fun, _args, _evaluator_pid) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def call_compiled(_compiled_fun, _args) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
 end

@@ -357,10 +357,24 @@ defmodule EMLX do
 
       evaluator_pid = Process.whereis(EMLX.NIF.CallEvaluator)
 
-      # TODO: cache compiled_fun
-      compiled_fun = NIF.compile(fun, nif_args, evaluator_pid) |> unwrap!()
+      dbg("before eval_fun")
+      eval_fun = Nx.Defn.Evaluator.__compile__(key, vars, fun, opts)
 
-      NIF.call_compiled(compiled_fun, nif_args)
+      # TODO: cache compiled_fun
+      dbg("before compile")
+
+      compiled_fun =
+        EMLX.NIF.compile(
+          fn args ->
+            args = Enum.map(args, &EMLX.Backend.to_nx/1)
+            eval_fun.([args])
+          end,
+          nif_args,
+          evaluator_pid
+        )
+
+      dbg("before call_compiled")
+      EMLX.NIF.call_compiled(compiled_fun, nif_args) |> dbg()
     end
   end
 

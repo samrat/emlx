@@ -38,6 +38,7 @@ defmodule EMLX.Backend do
   def to_nx({device, ref} = device_ref, %T{type: type, shape: shape} = t)
       when is_atom(device) and is_reference(ref) do
     # Get the MLX array's type
+
     mlx_type = EMLX.scalar_type(device_ref)
 
     # Convert if needed (similar to the torch byte conversion)
