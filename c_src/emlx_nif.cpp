@@ -542,19 +542,14 @@ NIF(compile) {
     ERL_NIF_TERM tensor_list = nx::nif::make_list(env, compile_args);
     ERL_NIF_TERM arg_list = enif_make_list1(env, tensor_list);
 
-    std::cout << "Calling Elixir callback with " << compile_args.size()
-              << " arguments" << std::endl;
-
     ERL_NIF_TERM output_list =
         make_nif_call(env, evaluator_pid, callback_fun, arg_list);
 
-    std::cout << "Got response from Elixir callback" << std::endl;
-
+    // Convert output_list back to vector of MLX arrays
     std::vector<mlx::core::array> output_tensors;
-    bool success = nx::nif::get_list(env, output_list, output_tensors);
-
-    std::cout << "Conversion to tensors " << (success ? "succeeded" : "failed")
-              << ", got " << output_tensors.size() << " tensors" << std::endl;
+    if (!nx::nif::get_list(env, output_list, output_tensors)) {
+      throw std::runtime_error("Failed to convert callback result to tensors");
+    }
 
     enif_free_env(env);
 
@@ -575,7 +570,6 @@ NIF(call_compiled) {
   LIST_PARAM(1, std::vector<mlx::core::array>, args);
 
   std::vector<mlx::core::array> result = (*compiled_function_ptr)(args);
-  std::cout << "result: " << result.size() << std::endl;
 
   return nx::nif::ok(env, nx::nif::make_list(env, result));
 }

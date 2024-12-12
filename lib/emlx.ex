@@ -332,25 +332,13 @@ defmodule EMLX do
         raise ArgumentError, "EMLX can only be used with the EMLX backend, got: #{inspect(other)}"
     end
 
-    fun = __compile__(key, vars, fun, opts)
-
-    dbg(args_list)
-    [result] = fun.(args_list)
-
-    # Nx.Defn.Composite.traverse(result, fn
-    #   %Nx.Tensor{data: %EMLX.Backend{ref: ref}} = node ->
-    #     # :ok = eval(ref)
-    #     node
-
-    #   other ->
-    #     other
-    # end)
-
-    [result]
+    __compile__(key, vars, fun, opts).(args_list)
   end
 
   @impl Nx.Defn.Compiler
   def __compile__(key, vars, fun, opts) do
+    expr = fun.(vars)
+
     fn [args] ->
       {devices, nif_args} =
         Enum.map(args, fn arg ->
@@ -364,8 +352,6 @@ defmodule EMLX do
           end
         end)
         |> Enum.unzip()
-
-      dbg(nif_args)
 
       device =
         Enum.reduce_while(devices, :cpu, fn
@@ -382,32 +368,52 @@ defmodule EMLX do
         raise "EMLX.NIF.CallEvaluator not alive"
       end
 
-      eval_fun = Nx.Defn.Evaluator.__compile__(key, vars, fun, opts)
-
-      # TODO: cache compiled_fun
-
-      EMLX.NIF.set_compile(true)
+      cache_key = {__MODULE__, :compiled_fun, key}
 
       compiled_fun =
-        EMLX.NIF.compile(
-          fn args ->
-            args = Enum.map(args, fn ref -> fn -> EMLX.Backend.to_nx({device, ref}) end end)
+        case :persistent_term.get(cache_key, :not_found) do
+          :not_found ->
+            eval_fun = Nx.Defn.Evaluator.__compile__(key, vars, fun, opts)
 
-            [%{data: %{ref: {_device, ref}}}] = eval_fun.([args])
-            [ref]
-          end,
-          nif_args,
-          evaluator_pid
-        )
+            EMLX.NIF.set_compile(true)
+
+            fun =
+              EMLX.NIF.compile(
+                fn args ->
+                  args = Enum.map(args, fn ref -> fn -> EMLX.Backend.to_nx({device, ref}) end end)
+
+                  eval_fun.([args])
+                  |> Nx.Defn.Composite.flatten_list()
+                  |> Enum.map(fn %Nx.Tensor{data: %{ref: {_device, ref}}} -> ref end)
+                end,
+                nif_args,
+                evaluator_pid
+              )
+              |> unwrap!()
+
+            EMLX.NIF.set_compile(false)
+
+            :persistent_term.put(cache_key, fun)
+            fun
+
+          cached_fun ->
+            cached_fun
+        end
+
+      results =
+        compiled_fun
+        |> EMLX.NIF.call_compiled(nif_args)
         |> unwrap!()
+        |> Enum.map(fn ref ->
+          EMLX.Backend.to_nx({device, ref})
+        end)
 
-      EMLX.NIF.set_compile(false)
+      {result, []} =
+        Nx.Defn.Composite.traverse(expr, results, fn _node, [h | t] ->
+          {h, t}
+        end)
 
-      EMLX.NIF.call_compiled(compiled_fun, nif_args)
-      |> unwrap!()
-      |> Enum.map(fn ref ->
-        EMLX.Backend.to_nx({device, ref})
-      end)
+      [result]
     end
   end
 
