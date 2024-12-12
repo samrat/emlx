@@ -355,8 +355,12 @@ defmodule EMLX do
       {devices, nif_args} =
         Enum.map(args, fn arg ->
           case arg.() do
-            %Nx.Tensor{data: %EMLX.Backend{ref: {device, ref}}} -> {device, ref}
-            other -> {nil, Nx.to_tensor(other)}
+            %Nx.Tensor{data: %EMLX.Backend{ref: {device, ref}}} ->
+              {device, ref}
+
+            other ->
+              %Nx.Tensor{data: %EMLX.Backend{ref: {device, ref}}} = Nx.to_tensor(other)
+              {device, ref}
           end
         end)
         |> Enum.unzip()
@@ -388,7 +392,9 @@ defmodule EMLX do
         EMLX.NIF.compile(
           fn args ->
             args = Enum.map(args, fn ref -> fn -> EMLX.Backend.to_nx({device, ref}) end end)
-            eval_fun.([args])
+
+            [%{data: %{ref: {_device, ref}}}] = eval_fun.([args])
+            [ref]
           end,
           nif_args,
           evaluator_pid
@@ -397,7 +403,11 @@ defmodule EMLX do
 
       EMLX.NIF.set_compile(false)
 
-      EMLX.NIF.call_compiled(compiled_fun, nif_args) |> unwrap!() |> dbg()
+      EMLX.NIF.call_compiled(compiled_fun, nif_args)
+      |> unwrap!()
+      |> Enum.map(fn ref ->
+        EMLX.Backend.to_nx({device, ref})
+      end)
     end
   end
 

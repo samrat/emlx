@@ -3,6 +3,7 @@
 #include "mlx/mlx.h"
 #include "nx_nif_utils.hpp"
 
+#include <iostream>
 #include <map>
 #include <numeric>
 #include <string>
@@ -533,35 +534,48 @@ NIF(compile) {
     return nx::nif::error(env, "Could not get evaluator pid");
   }
 
-  auto fun = [evaluator_pid, env, callback_fun_outer](
+  ErlNifEnv *closure_env = enif_alloc_env();
+
+  auto fun = [env = closure_env, evaluator_pid, callback_fun_outer](
                  const std::vector<mlx::core::array> &compile_args) {
-    ErlNifEnv *closure_env = enif_alloc_env();
-    ERL_NIF_TERM callback_fun;
-    move_between_envs(callback_fun_outer, &callback_fun, env, closure_env);
-    ERL_NIF_TERM tensor_list = nx::nif::make_list(closure_env, compile_args);
-    ERL_NIF_TERM arg_list = enif_make_list1(closure_env, tensor_list);
+    ERL_NIF_TERM callback_fun = enif_make_copy(env, callback_fun_outer);
+    ERL_NIF_TERM tensor_list = nx::nif::make_list(env, compile_args);
+    ERL_NIF_TERM arg_list = enif_make_list1(env, tensor_list);
+
+    std::cout << "Calling Elixir callback with " << compile_args.size()
+              << " arguments" << std::endl;
 
     ERL_NIF_TERM output_list =
-        make_nif_call(closure_env, evaluator_pid, callback_fun, arg_list);
+        make_nif_call(env, evaluator_pid, callback_fun, arg_list);
+
+    std::cout << "Got response from Elixir callback" << std::endl;
 
     std::vector<mlx::core::array> output_tensors;
-    nx::nif::get_list(closure_env, output_list, output_tensors);
+    bool success = nx::nif::get_list(env, output_list, output_tensors);
 
-    enif_free_env(closure_env);
+    std::cout << "Conversion to tensors " << (success ? "succeeded" : "failed")
+              << ", got " << output_tensors.size() << " tensors" << std::endl;
+
+    enif_free_env(env);
 
     return output_tensors;
   };
 
-  emlx::function compiled_function_ptr = mlx::core::compile(fun, false);
+  emlx::function compiled_function_ptr = mlx::core::compile(fun);
 
   return nx::nif::ok(env, create_function_resource(env, compiled_function_ptr));
 }
 
 NIF(call_compiled) {
-  PARAM(0, emlx::function *, compiled_function_ptr);
+  emlx::function *compiled_function_ptr = nullptr;
+
+  if (!nx::nif::get(env, argv[0], compiled_function_ptr)) {
+    return nx::nif::error(env, "Unable to get compiled function pointer");
+  }
   LIST_PARAM(1, std::vector<mlx::core::array>, args);
 
-  auto result = (*compiled_function_ptr)(args);
+  std::vector<mlx::core::array> result = (*compiled_function_ptr)(args);
+  std::cout << "result: " << result.size() << std::endl;
 
   return nx::nif::ok(env, nx::nif::make_list(env, result));
 }

@@ -99,14 +99,10 @@ static ERL_NIF_TERM make_nif_call(ErlNifEnv *caller_env, ErlNifPid evaluator,
                      enif_make_tuple3(caller_env, fun, args, callback_term));
   enif_send(caller_env, &evaluator, callback_res->msg_env, data);
 
-  enif_clear_env(callback_res->msg_env);
   enif_mutex_lock(callback_res->mtx);
-  while (!callback_res->return_value_set) {
-    enif_cond_wait(callback_res->cond, callback_res->mtx);
-  }
+  enif_cond_wait(callback_res->cond, callback_res->mtx);
   enif_mutex_unlock(callback_res->mtx);
 
-  enif_clear_env(caller_env);
   ERL_NIF_TERM return_value =
       enif_make_copy(caller_env, callback_res->return_value);
   enif_release_resource(callback_res);
@@ -120,8 +116,8 @@ static ERL_NIF_TERM nif_call_evaluated(ErlNifEnv *env, int argc,
   if (!enif_get_resource(env, argv[0], CallbackNifRes::type, (void **)&res))
     return enif_make_badarg(env);
 
+  enif_clear_env(res->msg_env);
   res->return_value = enif_make_copy(res->msg_env, argv[1]);
-  res->return_value_set = true;
   enif_cond_signal(res->cond);
 
   return enif_make_atom(env, "ok");

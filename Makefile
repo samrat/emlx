@@ -40,6 +40,7 @@ MAKE_JOBS ?= $(MAKE_DEFAULT_JOBS)
 
 # Source files
 SOURCES = c_src/emlx_nif.cpp
+HEADERS = c_src/nif_call.h c_src/nx_nif_utils.hpp
 OBJECTS = $(patsubst c_src/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
 
 # Main targets
@@ -49,7 +50,7 @@ all: $(MLX_SO) $(EMLX_SO)
 $(PRIV_DIR):
 	@ mkdir -p $(PRIV_DIR)
 
-$(BUILD_DIR)/%.o: c_src/%.cpp
+$(BUILD_DIR)/%.o: c_src/%.cpp $(HEADERS)
 	@ mkdir -p $(BUILD_DIR)
 	$(CXX) $(CFLAGS) -c $< -o $@
 

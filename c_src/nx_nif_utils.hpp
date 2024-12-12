@@ -285,9 +285,9 @@ int get(ErlNifEnv *env, ERL_NIF_TERM term, bool *var) {
 
 // function
 
-int get(ErlNifEnv *env, ERL_NIF_TERM term, emlx::function **var) {
+int get(ErlNifEnv *env, ERL_NIF_TERM term, emlx::function *&var) {
   return enif_get_resource(env, term, resource_object<emlx::function>::type,
-                           reinterpret_cast<void **>(var));
+                           reinterpret_cast<void **>(&var));
 }
 
 // Containers

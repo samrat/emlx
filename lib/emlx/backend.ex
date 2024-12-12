@@ -85,8 +85,6 @@ defmodule EMLX.Backend do
 
   @impl true
   def to_binary(tensor, limit) do
-    raise "asdf"
-
     EMLX.to_blob(from_nx(tensor), limit)
     |> maybe_modify_binary(to_nx_type(to_mlx_type(tensor.type)), tensor.type)
   end
