@@ -19,7 +19,7 @@ To use EMLX, you can add it as a dependency in your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:emlx, "~> 0.1.0"}
+    {:emlx, github: "elixir-nx/emlx", branch: "main"}
   ]
 end
 ```
