@@ -348,7 +348,21 @@ defmodule EMLX do
   end
 
   @impl Nx.Defn.Compiler
-  defdelegate __compile__(key, vars, fun, opts), to: Nx.Defn.Evaluator
+  def __compile__(key, vars, fun, opts) do
+    fn [args] ->
+      nif_args =
+        args
+        |> Nx.Defn.Composite.flatten_list()
+        |> Enum.map(& &1.data.ref)
+
+      evaluator_pid = Process.whereis(EMLX.NIF.CallEvaluator)
+
+      # TODO: cache compiled_fun
+      compiled_fun = NIF.compile(fun, nif_args, evaluator_pid) |> unwrap!()
+
+      NIF.call_compiled(compiled_fun, nif_args)
+    end
+  end
 
   @impl Nx.Defn.Compiler
   defdelegate __partitions_options__(opts), to: Nx.Defn.Evaluator

@@ -7,6 +7,9 @@
 #include <numeric>
 #include <string>
 
+#define NIF_CALL_IMPLEMENTATION
+#include "nif_call.h"
+
 using namespace mlx::core;
 
 std::map<const std::string, const mlx::core::Dtype> dtypes = {
@@ -150,6 +153,29 @@ create_tensor_resource(ErlNifEnv *env, mlx::core::array tensor) {
 
   ret = enif_make_resource(env, tensorPtr);
   enif_release_resource(tensorPtr);
+
+  return ret;
+}
+
+ERL_NIF_TERM create_function_resource(ErlNifEnv *env, std::function<std::vector<array>(const std::vector<array>&)> function) {
+  ERL_NIF_TERM ret;
+  std::atomic<int> *refcount;
+  auto function_ptr = (std::function<std::vector<array>(const std::vector<array>&)>*)
+    enif_alloc_resource(FUNCTION_TYPE,
+      sizeof(std::function<std::vector<array>(const std::vector<array>&>))
+      + sizeof(std::atomic<int>)
+      + sizeof(std::atomic_flag));
+
+  if (function_ptr == NULL) {
+    return enif_make_badarg(env);
+  }
+
+  new (function_ptr) std::function<std::vector<array>(const std::vector<array>&)>(function);
+  refcount = new (function_ptr + 1) std::atomic<int>(1);
+  new (refcount + 1) std::atomic_flag();
+
+  ret = enif_make_resource(env, function_ptr);
+  enif_release_resource(function_ptr);
 
   return ret;
 }
@@ -479,6 +505,38 @@ NIF(eval) {
   return nx::nif::ok(env);
 }
 
+NIF(compile) {
+  ERL_NIF_TERM callback_fun = argv[0];
+  LIST_PARAM(1, std::vector<mlx::core::array>, arrays);
+  ErlNifPid evaluator_pid;
+  if(!enif_get_local_pid(env, argv[1], &evaluator_pid)) {
+    return nx::nif::error(env, "Could not get evaluator pid");
+  }
+
+  auto fun = [env, evaluator_pid, callback_fun](const std::vector<mlx::core::array>& compile_args) {
+    ERL_NIF_TERM tensor_list = make_list(env, compile_args);
+    ERL_NIF_TERM output_list = make_nif_call(env, evaluator_pid, callback_fun, tensor_list);
+
+    std::vector<mlx::core::array> output_tensors;
+    get_list(env, output_list, &output_tensors);
+
+    return output_tensors;
+  }
+
+  auto compiled_function_ptr = mlx::core::compile(fun, false);
+
+  return nx::nif::ok(env, create_function_resource(env, compiled_function_ptr));
+}
+
+NIF(call_compiled) {
+  FUNCTION_PARAM(0, compiled_function_ptr);
+  LIST_PARAM(1, std::vector<mlx::core::array>, args);
+
+  auto result = (*compiled_function_ptr)(args);
+
+  return nx::nif::ok(env, make_list(env, result));
+}
+
 NIF(stack) {
   LIST_PARAM(0, std::vector<mlx::core::array>, arrays);
   PARAM(1, int, axis);
@@ -675,16 +733,26 @@ static void free_tensor(ErlNifEnv *env, void *obj) {
   }
 }
 
+static void free_function(ErlNifEnv *env, void *obj) {
+  std::function<std::vector<mlx::core::array>(const std::vector<mlx::core::array>&)> *function = static_cast<std::function<std::vector<mlx::core::array>(const std::vector<mlx::core::array>&)> *>(obj);
+  if (function != nullptr) {
+    delete function;
+  }
+}
+
 static int open_resource_type(ErlNifEnv *env) {
-  const char *name = "MLXArray";
+  const char *name = ;
   ErlNifResourceFlags flags =
       (ErlNifResourceFlags)(ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER);
 
-  TENSOR_TYPE =
-      enif_open_resource_type(env, NULL, name, free_tensor, flags, NULL);
-  if (TENSOR_TYPE == NULL) {
+  if (!enif_open_resource_type(env, NULL, "EMLX.MLXArray", free_tensor, flags, NULL)) {
     return -1;
   }
+
+  if (!enif_open_resource_type(env, NULL, "EMLX.CompiledFunction", free_function, flags, NULL)) {
+    return -1;
+  }
+
   return 0;
 }
 
@@ -692,6 +760,11 @@ static int load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info) {
   if (open_resource_type(env) != 0) {
     return -1;
   }
+
+  if (nif_call_onload(env) != 0) {
+    return -1;
+  }
+
   return 0;
 }
 
@@ -914,7 +987,9 @@ NIF(as_strided) {
   TENSOR(mlx::core::as_strided(*t, shape, strides, offset, device));
 }
 
-static ErlNifFunc nif_funcs[] = {{"strides", 1, strides},
+static ErlNifFunc nif_funcs[] = {
+                                 NIF_CALL_NIF_FUNC(nif_call_evaluated),
+                                 {"strides", 1, strides},
                                  {"as_strided", 5, as_strided},
                                  {"scalar_type", 1, scalar_type},
                                  {"eval", 1, eval},

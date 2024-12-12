@@ -3,6 +3,8 @@ defmodule EMLX.NIF do
   Elixir bindings for MLX array operations.
   """
 
+  use NifCall.NIF
+
   for {name, arity} <- EMLX.__mlx_functions__() do
     args = Macro.generate_arguments(arity, __MODULE__)
 
