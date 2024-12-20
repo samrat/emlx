@@ -11,6 +11,7 @@ MLX_BUILD_DIR = $(EMLX_CACHE_DIR)/mlx/build-$(MLX_VERSION)$(MLX_VARIANT)
 MLX_INSTALL_DIR = $(MLX_DIR)
 MLX_SO = $(MLX_LIB_DIR)/libmlx.dylib
 
+$(info LIBMLX_ENABLE_DEBUG=$(LIBMLX_ENABLE_DEBUG))
 # Build flags
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I$(MLX_INCLUDE_DIR) -Wall \
          -std=c++17
@@ -39,6 +40,7 @@ MAKE_JOBS ?= $(MAKE_DEFAULT_JOBS)
 
 # Source files
 SOURCES = c_src/emlx_nif.cpp
+HEADERS = c_src/nif_call.h c_src/nx_nif_utils.hpp
 OBJECTS = $(patsubst c_src/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
 
 # Main targets
@@ -48,7 +50,7 @@ all: $(MLX_SO) $(EMLX_SO)
 $(PRIV_DIR):
 	@ mkdir -p $(PRIV_DIR)
 
-$(BUILD_DIR)/%.o: c_src/%.cpp
+$(BUILD_DIR)/%.o: c_src/%.cpp $(HEADERS)
 	@ mkdir -p $(BUILD_DIR)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
